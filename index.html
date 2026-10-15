@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GO UIC — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <img src="assets/logo-go.png" alt="Grupo Oroño">
+      <h1>GO UIC</h1>
+      <h2>Unidad de Investigación Clínica</h2>
+      <form id="loginForm">
+        <input type="password" id="password" class="login-field" placeholder="Contraseña" required autofocus>
+        <button type="submit" class="login-btn">Ingresar</button>
+        <p id="loginError" class="login-error">Contraseña incorrecta</p>
+      </form>
+    </div>
+  </div>
+  <script src="js/auth.js"></script>
+  <script>
+    // If already authenticated, go to dashboard
+    if (isAuthenticated()) {
+      window.location.href = 'dashboard.html';
+    }
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const success = await login(password);
+      if (success) {
+        window.location.href = 'dashboard.html';
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+        document.getElementById('password').value = '';
+        document.getElementById('password').focus();
+      }
+    });
+  </script>
+</body>
+</html>

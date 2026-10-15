@@ -1,0 +1,94 @@
+:root {
+  --go-primary: #003366;
+  --go-secondary: #00874e;
+  --go-bg: #f8f9fa;
+  --go-card: #ffffff;
+  --go-text: #1f2937;
+  --go-success: #10b981;
+  --go-warning: #f59e0b;
+  --go-error: #ef4444;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--go-bg);
+  color: var(--go-text);
+  margin: 0;
+}
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--go-primary) 0%, #004d99 100%);
+}
+
+.login-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.login-card img {
+  max-width: 180px;
+  margin-bottom: 1.5rem;
+}
+
+.login-card h1 {
+  color: var(--go-primary);
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.login-card h2 {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 400;
+  margin-bottom: 2rem;
+}
+
+.login-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-field:focus {
+  border-color: var(--go-primary);
+  box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--go-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-btn:hover {
+  background: #004d99;
+}
+
+.login-error {
+  color: var(--go-error);
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  display: none;
+}
