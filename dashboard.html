@@ -92,17 +92,6 @@
   <script src="js/sections/proyeccion.js"></script>
   <script src="js/sections/sponsors.js"></script>
   <script>
-    // Tab switching: activates the tab with data-section=name and shows #section-name.
-    function switchSection(name) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.section === name);
-      });
-      document.querySelectorAll('#content > div').forEach(div => {
-        div.classList.toggle('hidden', div.id !== 'section-' + name);
-      });
-    }
-  </script>
-  <script>
     if (!requireAuth()) throw new Error('Not authenticated');
     loadAllData();
   </script>

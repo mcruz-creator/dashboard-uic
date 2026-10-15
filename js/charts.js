@@ -64,6 +64,7 @@ function createBarChart(canvasId, labels, datasets, options = {}) {
   const el = document.getElementById(canvasId);
   if (!el) return null;
   const ctx = el.getContext('2d');
+  const { horizontal, ...restOpts } = options;
   const chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets },
@@ -76,15 +77,15 @@ function createBarChart(canvasId, labels, datasets, options = {}) {
       },
       scales: {
         ...defaultScales,
-        ...(options.horizontal ? {
+        ...(horizontal ? {
           x: { ...defaultScales.y, beginAtZero: true },
           y: { ...defaultScales.x }
         } : {
           y: { ...defaultScales.y, beginAtZero: true }
         })
       },
-      indexAxis: options.horizontal ? 'y' : 'x',
-      ...options
+      indexAxis: horizontal ? 'y' : 'x',
+      ...restOpts
     }
   });
   chartInstances[canvasId] = chart;
