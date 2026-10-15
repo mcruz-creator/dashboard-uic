@@ -35,14 +35,14 @@ function renderProduccion() {
       <table class="data-table" id="prod-table">
         <thead>
           <tr>
-            <th data-sort="protocolo">Protocolo <span class="sort-arrow">↕</span></th>
-            <th data-sort="visita">Visita <span class="sort-arrow">↕</span></th>
-            <th data-sort="paciente">Paciente <span class="sort-arrow">↕</span></th>
-            <th data-sort="tipoVisita">Tipo Visita <span class="sort-arrow">↕</span></th>
-            <th data-sort="asistencia">Asistencia <span class="sort-arrow">↕</span></th>
-            <th data-sort="lugarTurno">Lugar <span class="sort-arrow">↕</span></th>
-            <th data-sort="fechaTurno">Fecha <span class="sort-arrow">↕</span></th>
-            <th data-sort="ip">IP <span class="sort-arrow">↕</span></th>
+            <th>Protocolo</th>
+            <th>Visita</th>
+            <th>Paciente</th>
+            <th>Tipo Visita</th>
+            <th>Asistencia</th>
+            <th>Lugar</th>
+            <th>Fecha</th>
+            <th>IP</th>
           </tr>
         </thead>
         <tbody id="prod-tbody"></tbody>
@@ -78,7 +78,6 @@ function renderProduccion() {
   populateSelect('prod-proto', protocolos);
   populateSelect('prod-ip', ips);
 
-  makeSortable('prod-table');
   produccionPage = 1;
   updateProduccion();
 }
@@ -96,8 +95,8 @@ function updateProduccion() {
   if (proto) data = data.filter(r => r.protocolo === proto);
   if (ip) data = data.filter(r => r.ip === ip);
   if (search) data = data.filter(r =>
-    r.paciente.toLowerCase().includes(search) ||
-    r.protocolo.toLowerCase().includes(search)
+    String(r.paciente ?? '').toLowerCase().includes(search) ||
+    String(r.protocolo ?? '').toLowerCase().includes(search)
   );
 
   produccionFiltered = data;
@@ -105,9 +104,10 @@ function updateProduccion() {
   // KPIs
   const totalVisitas = data.length;
   const pacientesUnicos = countDistinct(data, 'paciente');
-  const cumplidos = data.filter(r =>
-    r.cumplimientoTurno.toLowerCase() === 'sí' || r.cumplimientoTurno.toLowerCase() === 'si'
-  ).length;
+  const cumplidos = data.filter(r => {
+    const val = String(r.cumplimientoTurno ?? '').toLowerCase();
+    return val === 'sí' || val === 'si';
+  }).length;
   const tasaCumpl = totalVisitas > 0 ? (cumplidos / totalVisitas) * 100 : 0;
   const mesesUnicos = new Set(data.map(r => `${r.anio}-${r.mes}`)).size;
   const visitasMes = mesesUnicos > 0 ? totalVisitas / mesesUnicos : totalVisitas;
