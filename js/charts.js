@@ -61,7 +61,9 @@ const defaultScales = {
 
 function createBarChart(canvasId, labels, datasets, options = {}) {
   destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId).getContext('2d');
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  const ctx = el.getContext('2d');
   const chart = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets },
@@ -91,7 +93,9 @@ function createBarChart(canvasId, labels, datasets, options = {}) {
 
 function createLineChart(canvasId, labels, datasets, options = {}) {
   destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId).getContext('2d');
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  const ctx = el.getContext('2d');
   const chart = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -109,7 +113,9 @@ function createLineChart(canvasId, labels, datasets, options = {}) {
 
 function createDoughnutChart(canvasId, labels, data, options = {}) {
   destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId).getContext('2d');
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  const ctx = el.getContext('2d');
   const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
@@ -137,7 +143,9 @@ function createDoughnutChart(canvasId, labels, data, options = {}) {
 
 function createComboChart(canvasId, labels, barDatasets, lineDatasets, options = {}) {
   destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId).getContext('2d');
+  const el = document.getElementById(canvasId);
+  if (!el) return null;
+  const ctx = el.getContext('2d');
   const allDatasets = [
     ...barDatasets.map(ds => ({ ...ds, type: 'bar', yAxisID: 'y' })),
     ...lineDatasets.map(ds => ({ ...ds, type: 'line', yAxisID: 'y1', fill: false, tension: 0.3 }))

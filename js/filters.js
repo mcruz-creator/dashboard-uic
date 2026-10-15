@@ -58,6 +58,18 @@ function countDistinct(data, key) {
   return new Set(data.map(r => r[key]).filter(Boolean)).size;
 }
 
+function getFilterValues(sectionId) {
+  const container = document.getElementById('section-' + sectionId);
+  if (!container) return {};
+  const selects = container.querySelectorAll('select');
+  const values = {};
+  selects.forEach(sel => {
+    const key = sel.id || sel.name;
+    if (key) values[key] = sel.value;
+  });
+  return values;
+}
+
 // Tab switching
 function switchSection(name) {
   const sections = ['home', 'facturacion', 'produccion', 'proyeccion', 'sponsors'];
@@ -98,7 +110,9 @@ function makeSortable(tableId) {
         return aVal < bVal ? 1 : -1;
       });
 
+      const totalsRow = tbody.querySelector('.totals-row');
       rows.forEach(row => tbody.appendChild(row));
+      if (totalsRow) tbody.appendChild(totalsRow);
     });
   });
 }
