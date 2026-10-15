@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GO UIC — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            go: { primary: '#003366', secondary: '#00874e', bg: '#f8f9fa' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-go-primary text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="assets/logo-go.png" alt="GO" class="h-10">
+        <span class="text-lg font-semibold hidden sm:inline">GO UIC — Dashboard</span>
+      </div>
+      <button onclick="logout()" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition">
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="bg-white border-b shadow-sm sticky top-[60px] z-40">
+    <div class="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+      <button class="tab-btn active" data-section="home" onclick="switchSection('home')">
+        Real vs Proyección
+      </button>
+      <button class="tab-btn" data-section="facturacion" onclick="switchSection('facturacion')">
+        Facturación
+      </button>
+      <button class="tab-btn" data-section="produccion" onclick="switchSection('produccion')">
+        Producción
+      </button>
+      <button class="tab-btn" data-section="proyeccion" onclick="switchSection('proyeccion')">
+        Proyección
+      </button>
+      <button class="tab-btn" data-section="sponsors" onclick="switchSection('sponsors')">
+        Patrocinadores
+      </button>
+    </div>
+  </nav>
+
+  <!-- Loading spinner -->
+  <div id="loading" class="flex flex-col items-center justify-center py-32">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-go-primary border-t-transparent mb-4"></div>
+    <p class="text-gray-500">Cargando datos...</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="error" class="hidden flex flex-col items-center justify-center py-32">
+    <p class="text-red-600 text-lg mb-4">No se pudieron cargar los datos. Verificá tu conexión.</p>
+    <button onclick="loadAllData()" class="bg-go-primary text-white px-6 py-2 rounded-lg hover:bg-blue-900 transition">
+      Reintentar
+    </button>
+  </div>
+
+  <!-- Main content (5 sections, only one visible at a time) -->
+  <main id="content" class="hidden max-w-7xl mx-auto px-4 py-6">
+    <div id="section-home"></div>
+    <div id="section-facturacion" class="hidden"></div>
+    <div id="section-produccion" class="hidden"></div>
+    <div id="section-proyeccion" class="hidden"></div>
+    <div id="section-sponsors" class="hidden"></div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/sections/home.js"></script>
+  <script src="js/sections/facturacion.js"></script>
+  <script src="js/sections/produccion.js"></script>
+  <script src="js/sections/proyeccion.js"></script>
+  <script src="js/sections/sponsors.js"></script>
+  <script>
+    // Tab switching: activates the tab with data-section=name and shows #section-name.
+    function switchSection(name) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === name);
+      });
+      document.querySelectorAll('#content > div').forEach(div => {
+        div.classList.toggle('hidden', div.id !== 'section-' + name);
+      });
+    }
+  </script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    loadAllData();
+  </script>
+</body>
+</html>
