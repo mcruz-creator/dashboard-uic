@@ -55,7 +55,7 @@ function getMetricRealMonthly(metric, year, month) {
   if (metric.id === 'ebitda') {
     const uicRevenue = rows.reduce((s, r) => s + (r.goUic || 0), 0);
     const costoReal = UIC_DATA.costosReales
-      .filter(c => c.anio === year && c.mes === month)
+      .filter(c => c.anio === year && c.mes === month && c.concepto === 'Total Costos UIC')
       .reduce((s, c) => s + c.total, 0);
     return uicRevenue - costoReal;
   }
@@ -253,47 +253,132 @@ function updateHome() {
     { label: 'Proyección', data: [projX2], backgroundColor: GO_COLORS.grayLight, borderColor: GO_COLORS.gray, borderWidth: 1, barPercentage: 0.5 }
   ]);
 
-  // Summary table: all metrics for N and 2N months
-  const tableRows = HOME_METRICS.map(met => {
-    const rVals = monthsInRange.map(({ year, month }) => getMetricRealMonthly(met, year, month));
-    const rTotal = rVals.reduce((s, v) => s + v, 0);
-    const pNVals = monthsInRange.map(({ year }) => getMetricProjMonthly(met, year));
-    const pN = pNVals.reduce((s, v) => s + v, 0);
-    const estX2 = rTotal * 2;
-    const pX2Vals = monthsX2.map(({ year }) => getMetricProjMonthly(met, year));
-    const pX2 = pX2Vals.reduce((s, v) => s + v, 0);
-    const cN = pN > 0 ? (rTotal / pN * 100).toFixed(1) : '—';
-    const cX2 = pX2 > 0 ? (estX2 / pX2 * 100).toFixed(1) : '—';
-    return `
-      <tr>
-        <td data-col="metrica" style="font-weight:600">${met.label}</td>
-        <td data-col="real_n" style="text-align:right">${formatUSD(rTotal)}</td>
-        <td data-col="proy_n" style="text-align:right">${formatUSD(pN)}</td>
-        <td data-col="cumpl_n" style="text-align:right;color:${parseFloat(cN) >= 90 ? 'var(--go-success)' : parseFloat(cN) >= 70 ? 'var(--go-warning)' : 'var(--go-error)'}">${cN}%</td>
-        <td data-col="est_x2" style="text-align:right">${formatUSD(estX2)}</td>
-        <td data-col="proy_x2" style="text-align:right">${formatUSD(pX2)}</td>
-        <td data-col="cumpl_x2" style="text-align:right;color:${parseFloat(cX2) >= 90 ? 'var(--go-success)' : parseFloat(cX2) >= 70 ? 'var(--go-warning)' : 'var(--go-error)'}">${cX2}%</td>
-      </tr>`;
-  }).join('');
+  // Helper: sum facturacion field for months
+  function sumFactField(field, months) {
+    return months.reduce((s, { year, month }) => {
+      const rows = UIC_DATA.facturacion.filter(r => r.anio === year && r.mes === month);
+      return s + rows.reduce((s2, r) => s2 + (r[field] || 0), 0);
+    }, 0);
+  }
+
+  // Helper: sum costos reales by concepto for months
+  function sumCostoConcepto(concepto, months) {
+    return months.reduce((s, { year, month }) => {
+      return s + UIC_DATA.costosReales
+        .filter(c => c.anio === year && c.mes === month && c.concepto === concepto)
+        .reduce((s2, c) => s2 + c.total, 0);
+    }, 0);
+  }
+
+  // Helper: get projection value (annual) — uses first year in range
+  function projAnual(key) {
+    const data = UIC_DATA.proyeccion[key] || {};
+    return data[desde.year] || 0;
+  }
+
+  // Helper: projection for N months
+  function projForMonths(key, months) {
+    return months.reduce((s, { year }) => {
+      const data = UIC_DATA.proyeccion[key] || {};
+      return s + (data[year] || 0) / 12;
+    }, 0);
+  }
+
+  // Build real values for N months
+  const r = {
+    facturacion: sumFactField('total', monthsInRange),
+    ohInst: sumFactField('overheadPct', monthsInRange),
+    goAce: sumFactField('goUic', monthsInRange),
+    sueldo: sumCostoConcepto('Sueldo Gerenta', monthsInRange),
+    gastos: sumCostoConcepto('Gastos operativos', monthsInRange),
+    incentivo: sumCostoConcepto('Incentivo Director', monthsInRange),
+    totalCostos: sumCostoConcepto('Total Costos UIC', monthsInRange)
+  };
+  r.totalGO = r.ohInst + r.goAce;
+  r.ebitda = r.goAce - r.totalCostos;
+  r.margen = r.goAce > 0 ? (r.ebitda / r.goAce * 100) : 0;
+
+  // Projection for N months
+  const pN_t = {
+    facturacion: projForMonths('Facturación Total GO UIC', monthsInRange),
+    ohInst: projForMonths('OH Instituciones GO', monthsInRange),
+    goAce: projForMonths('GO ACE', monthsInRange),
+    sueldo: projForMonths('Sueldo Gerenta', monthsInRange),
+    gastos: projForMonths('Gastos operativos', monthsInRange),
+    incentivo: projForMonths('Incentivo Director', monthsInRange),
+    totalCostos: projForMonths('Total Costos UIC', monthsInRange)
+  };
+  pN_t.totalGO = pN_t.ohInst + pN_t.goAce;
+  pN_t.ebitda = pN_t.goAce - pN_t.totalCostos;
+  pN_t.margen = pN_t.goAce > 0 ? (pN_t.ebitda / pN_t.goAce * 100) : 0;
+
+  // Estimated x2 = real * 2
+  const est = {};
+  for (const k of Object.keys(r)) {
+    est[k] = (k === 'margen') ? r.margen : r[k] * 2;
+  }
+
+  // Projection for 2N months
+  const pX2_t = {
+    facturacion: projForMonths('Facturación Total GO UIC', monthsX2),
+    ohInst: projForMonths('OH Instituciones GO', monthsX2),
+    goAce: projForMonths('GO ACE', monthsX2),
+    sueldo: projForMonths('Sueldo Gerenta', monthsX2),
+    gastos: projForMonths('Gastos operativos', monthsX2),
+    incentivo: projForMonths('Incentivo Director', monthsX2),
+    totalCostos: projForMonths('Total Costos UIC', monthsX2)
+  };
+  pX2_t.totalGO = pX2_t.ohInst + pX2_t.goAce;
+  pX2_t.ebitda = pX2_t.goAce - pX2_t.totalCostos;
+  pX2_t.margen = pX2_t.goAce > 0 ? (pX2_t.ebitda / pX2_t.goAce * 100) : 0;
+
+  // Table row builder
+  function tRow(label, rVal, pNVal, estVal, pX2Val, opts = {}) {
+    const isSection = opts.section;
+    const isPct = opts.pct;
+    const isBold = opts.bold;
+    if (isSection) {
+      return `<tr style="background:#f0f4f8"><td colspan="5" style="font-weight:700;color:var(--go-primary);padding:0.5rem 1rem;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.03em">${label}</td></tr>`;
+    }
+    const fmt = isPct ? (v => v.toFixed(1) + '%') : formatUSD;
+    const style = isBold ? 'font-weight:700' : '';
+    return `<tr style="${style}">
+      <td style="padding-left:${opts.indent ? '2rem' : '1rem'}">${label}</td>
+      <td style="text-align:right">${fmt(rVal)}</td>
+      <td style="text-align:right">${fmt(pNVal)}</td>
+      <td style="text-align:right">${fmt(estVal)}</td>
+      <td style="text-align:right">${fmt(pX2Val)}</td>
+    </tr>`;
+  }
+
+  const projTableHTML = [
+    tRow('Facturación Total GO UIC', r.facturacion, pN_t.facturacion, est.facturacion, pX2_t.facturacion, { bold: true }),
+    tRow('DISTRIBUCIÓN — GRUPO OROÑO', 0, 0, 0, 0, { section: true }),
+    tRow('OH Instituciones GO — 13,14%', r.ohInst, pN_t.ohInst, est.ohInst, pX2_t.ohInst, { indent: true }),
+    tRow('GO ACE — UIC — 3,33%', r.goAce, pN_t.goAce, est.goAce, pX2_t.goAce, { indent: true }),
+    tRow('→ TOTAL GO por año', r.totalGO, pN_t.totalGO, est.totalGO, pX2_t.totalGO, { bold: true }),
+    tRow('COSTOS OPERATIVOS — GO ACE (UIC)', 0, 0, 0, 0, { section: true }),
+    tRow('Sueldo Gerenta UIC', r.sueldo, pN_t.sueldo, est.sueldo, pX2_t.sueldo, { indent: true }),
+    tRow('Gastos operativos (8% retención UIC)', r.gastos, pN_t.gastos, est.gastos, pX2_t.gastos, { indent: true }),
+    tRow('Incentivo Director', r.incentivo, pN_t.incentivo, est.incentivo, pX2_t.incentivo, { indent: true }),
+    tRow('Total Costos UIC', r.totalCostos, pN_t.totalCostos, est.totalCostos, pX2_t.totalCostos, { bold: true }),
+    tRow('RESULTADO — GO ACE (UIC)', 0, 0, 0, 0, { section: true }),
+    tRow('EBITDA UIC', r.ebitda, pN_t.ebitda, est.ebitda, pX2_t.ebitda, { bold: true }),
+    tRow('Margen EBITDA / Facturación UIC', r.margen, pN_t.margen, est.margen, pX2_t.margen, { pct: true })
+  ].join('');
 
   document.getElementById('home-summary-table').innerHTML = `
     <table class="data-table">
       <thead>
         <tr>
-          <th rowspan="2" style="vertical-align:bottom">Métrica</th>
-          <th colspan="3" style="text-align:center;border-bottom:1px solid #e5e7eb">${N} meses (${desdeLabel} — ${hastaLabel})</th>
-          <th colspan="3" style="text-align:center;border-bottom:1px solid #e5e7eb">${N2} meses estimado (${desdeLabel} — ${hastaX2Label})</th>
-        </tr>
-        <tr>
-          <th style="text-align:right">Real</th>
-          <th style="text-align:right">Proyectado</th>
-          <th style="text-align:right">Cumpl.</th>
-          <th style="text-align:right">Estimado</th>
-          <th style="text-align:right">Proyectado</th>
-          <th style="text-align:right">Cumpl.</th>
+          <th>Concepto</th>
+          <th style="text-align:right">${N}m Real<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel} — ${hastaLabel}</span></th>
+          <th style="text-align:right">${N}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel} — ${hastaLabel}</span></th>
+          <th style="text-align:right">${N2}m Est.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel} — ${hastaX2Label}</span></th>
+          <th style="text-align:right">${N2}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel} — ${hastaX2Label}</span></th>
         </tr>
       </thead>
-      <tbody>${tableRows}</tbody>
+      <tbody>${projTableHTML}</tbody>
     </table>
   `;
 }

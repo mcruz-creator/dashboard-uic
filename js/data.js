@@ -180,16 +180,30 @@ function parseCostosReales(results) {
   const headers = Object.keys(results.data[0] || {});
   const monthCols = headers.filter(h => h && h !== headers[0]);
 
+  const conceptoMap = {
+    'sueldo': 'Sueldo Gerenta',
+    'gastos': 'Gastos operativos',
+    'incentivo': 'Incentivo Director',
+    'total': 'Total Costos UIC'
+  };
+
   results.data.forEach(row => {
-    const concepto = normalizeString(row[headers[0]]);
-    if (!concepto || !concepto.toLowerCase().includes('total costos')) return;
+    const raw = normalizeString(row[headers[0]]);
+    if (!raw) return;
+    const lower = raw.toLowerCase();
+    let concepto = null;
+    for (const [key, name] of Object.entries(conceptoMap)) {
+      if (lower.includes(key)) { concepto = name; break; }
+    }
+    if (!concepto) return;
+
     monthCols.forEach(col => {
       const match = col.match(/([a-záéíóú]+)-(\d{2})/i);
       if (!match) return;
       const mes = MONTH_ABBR[match[1].toLowerCase().substring(0, 3)] || 0;
       const anio = 2000 + parseInt(match[2]);
       if (mes > 0) {
-        costos.push({ anio, mes, total: parseNumber(row[col]) });
+        costos.push({ anio, mes, total: parseNumber(row[col]), concepto });
       }
     });
   });
