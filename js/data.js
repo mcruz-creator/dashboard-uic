@@ -1,9 +1,8 @@
-// Google Sheets CSV URLs — replace GID with actual sheet GID after publishing
+const SHEET_ID = '1Dv9VUVJc4APCQ3H0A1d0jLGL769enY_E2INKeQ6wrYA';
 const SHEET_URLS = {
-  // Format: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=GID
-  facturacion: 'PLACEHOLDER_FACTURACION_URL',
-  produccion: 'PLACEHOLDER_PRODUCCION_URL',
-  proyeccion: 'PLACEHOLDER_PROYECCION_URL'
+  facturacion: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=535882626`,
+  produccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=461266884`,
+  proyeccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1697903188`
 };
 
 const UIC_DATA = {
@@ -12,6 +11,18 @@ const UIC_DATA = {
   proyeccion: {},
   loaded: false
 };
+
+const MONTH_ABBR = {
+  'ene':1,'feb':2,'mar':3,'abr':4,'may':5,'jun':6,
+  'jul':7,'ago':8,'sep':9,'set':9,'oct':10,'nov':11,'dic':12
+};
+
+function parseMonthSpanish(val) {
+  if (!val) return 0;
+  const s = String(val).trim().toLowerCase();
+  const abbr = s.substring(0, 3);
+  return MONTH_ABBR[abbr] || parseNumber(val);
+}
 
 function parseNumber(val) {
   if (val === null || val === undefined || val === '') return 0;
@@ -47,7 +58,7 @@ function parseFacturacion(results) {
       fechaFact: normalizeString(row['Fecha Fact']),
       tipoFact: normalizeString(row['Tipo Fact']),
       numeroFact: normalizeString(row['Numero Fact']),
-      mes: parseNumber(row['Mes']),
+      mes: parseMonthSpanish(row['Mes']),
       anio: parseNumber(row['Año'] || row['Ano']),
       cobrado: normalizeString(row['Cobrado'])
     }));
@@ -80,7 +91,7 @@ function parseProduccion(results) {
       tipoAtencion: normalizeString(row['Tipo de Atención'] || row['Tipo de Atencion']),
       fases: normalizeString(row['Fases']),
       especialidades: normalizeString(row['Especialidades']),
-      mes: parseNumber(row['Mes']),
+      mes: parseMonthSpanish(row['Mes']),
       anio: parseNumber(row['Año'] || row['Ano'])
     }));
 }

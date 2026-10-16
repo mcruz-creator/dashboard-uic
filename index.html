@@ -15,9 +15,10 @@
       <h1>GO UIC</h1>
       <h2>Unidad de Investigación Clínica</h2>
       <form id="loginForm">
-        <input type="password" id="password" class="login-field" placeholder="Contraseña" required autofocus>
+        <input type="email" id="username" class="login-field" placeholder="Usuario (email)" required autofocus>
+        <input type="password" id="password" class="login-field" placeholder="Contraseña" required>
         <button type="submit" class="login-btn">Ingresar</button>
-        <p id="loginError" class="login-error">Contraseña incorrecta</p>
+        <p id="loginError" class="login-error">Usuario o contraseña incorrectos</p>
       </form>
     </div>
   </div>
@@ -29,8 +30,9 @@
     }
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const user = document.getElementById('username').value;
       const password = document.getElementById('password').value;
-      const success = await login(password);
+      const success = await login(user, password);
       if (success) {
         window.location.href = 'dashboard.html';
       } else {

@@ -1,8 +1,6 @@
 const AUTH_CONFIG = {
-  // SHA-256 hash of the password — generate with:
-  // echo -n "password" | shasum -a 256
-  // or: crypto.subtle.digest('SHA-256', new TextEncoder().encode('password'))
-  passwordHash: 'PLACEHOLDER_HASH_HERE',
+  expectedUser: 'ymargaria@grupoorono.com.ar',
+  passwordHash: '17be33037dca00291e22adeca12afaaa66dad61090ae094a27f26950ac8d3426',
   sessionKey: 'uic_auth',
   tokenValue: 'authenticated'
 };
@@ -15,7 +13,8 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function login(password) {
+async function login(user, password) {
+  if (user.trim().toLowerCase() !== AUTH_CONFIG.expectedUser) return false;
   const hash = await hashPassword(password);
   if (hash === AUTH_CONFIG.passwordHash) {
     sessionStorage.setItem(AUTH_CONFIG.sessionKey, AUTH_CONFIG.tokenValue);
