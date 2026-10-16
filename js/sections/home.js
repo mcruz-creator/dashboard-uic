@@ -146,12 +146,12 @@ function updateHome() {
   const rowDefs = [
     { label: 'Facturación Total GO UIC', type: 'fact', field: 'total', projKey: 'Facturación Total GO UIC', bold: true },
     { label: 'DISTRIBUCIÓN — GRUPO OROÑO', type: 'section' },
-    { label: 'OH Instituciones GO — 13,14%', type: 'fact', field: 'overheadPct', projKey: 'OH Instituciones GO', indent: true },
-    { label: 'GO ACE — UIC — 3,33%', type: 'fact', field: 'goUic', projKey: 'GO ACE', indent: true },
-    { label: '→ TOTAL GO por año', type: 'calc', calc: (vals) => vals['ohInst'] + vals['goAce'], bold: true, calcKeys: ['ohInst', 'goAce'] },
+    { label: 'OH Instituciones GO', type: 'fact', field: 'overheadPct', projKey: 'OH Instituciones GO', indent: true },
+    { label: 'GO ACE — UIC', type: 'fact', field: 'goUic', projKey: 'GO ACE', indent: true },
+    { label: 'TOTAL GO', type: 'calc', calc: (vals) => vals['ohInst'] + vals['goAce'], bold: true, calcKeys: ['ohInst', 'goAce'] },
     { label: 'COSTOS OPERATIVOS — GO ACE (UIC)', type: 'section' },
     { label: 'Sueldo Gerenta UIC', type: 'costo', concepto: 'Sueldo Gerenta', projKey: 'Sueldo Gerenta', indent: true },
-    { label: 'Gastos operativos (8% retención UIC)', type: 'costo', concepto: 'Gastos operativos', projKey: 'Gastos operativos', indent: true },
+    { label: 'Gastos operativos', type: 'costo', concepto: 'Gastos operativos', projKey: 'Gastos operativos', indent: true },
     { label: 'Incentivo Director', type: 'costo', concepto: 'Incentivo Director', projKey: 'Incentivo Director', indent: true },
     { label: 'Total Costos UIC', type: 'costo', concepto: 'Total Costos UIC', projKey: 'Total Costos UIC', bold: true },
     { label: 'RESULTADO — GO ACE (UIC)', type: 'section' },
@@ -161,8 +161,8 @@ function updateHome() {
 
   // Internal keys for calc dependencies
   const keyMap = {
-    'OH Instituciones GO — 13,14%': 'ohInst',
-    'GO ACE — UIC — 3,33%': 'goAce',
+    'OH Instituciones GO': 'ohInst',
+    'GO ACE — UIC': 'goAce',
     'Total Costos UIC': 'totalCostos',
     'EBITDA UIC': 'ebitda'
   };
@@ -285,7 +285,7 @@ function updateHome() {
   // Build rows
   const tableRows = rowDefs.map((row, i) => {
     if (row.type === 'section') {
-      const colSpan = monthColumns.length + 4;
+      const colSpan = monthColumns.length + 5;
       return `<tr style="background:#f0f4f8"><td colspan="${colSpan}" style="font-weight:700;color:var(--go-primary);padding:0.5rem 1rem;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.03em">${row.label}</td></tr>`;
     }
 
@@ -300,12 +300,18 @@ function updateHome() {
     const diffColor = isPct ? '' : (diffVal >= 0 ? 'color:var(--go-success)' : 'color:var(--go-error)');
     const diffPrefix = (!isPct && diffVal >= 0) ? '+' : '';
 
+    const proyVal = proy6m[i];
+    const varPct = (proyVal && proyVal !== 0 && !isPct) ? ((est6m[i] - proyVal) / Math.abs(proyVal) * 100) : null;
+    const varColor = varPct !== null ? (varPct >= 0 ? 'color:var(--go-success)' : 'color:var(--go-error)') : '';
+    const varText = varPct !== null ? ((varPct >= 0 ? '+' : '') + varPct.toFixed(1) + '%') : '—';
+
     return `<tr style="${style}">
       <td style="${indent};white-space:nowrap">${row.label}</td>
       ${monthCells}
       <td style="text-align:right;font-weight:600">${fmt(est6m[i])}</td>
       <td style="text-align:right">${fmt(proy6m[i])}</td>
       <td style="text-align:right;font-weight:600;${diffColor}">${diffPrefix}${fmt(diffVal)}</td>
+      <td style="text-align:right;font-weight:600;${varColor}">${varText}</td>
     </tr>`;
   }).join('');
 
@@ -318,6 +324,7 @@ function updateHome() {
           <th style="text-align:right;white-space:nowrap">${N2}m Est.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span></th>
           <th style="text-align:right;white-space:nowrap">${N2}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span></th>
           <th style="text-align:right;white-space:nowrap">Diferencia<br><span style="font-weight:400;font-size:0.7rem">Est. vs Proy.</span></th>
+          <th style="text-align:right;white-space:nowrap">Var. %<br><span style="font-weight:400;font-size:0.7rem">Est. vs Proy.</span></th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
