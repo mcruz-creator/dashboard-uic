@@ -77,7 +77,7 @@ function switchSection(name) {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== name);
   });
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  document.querySelectorAll('.sidebar-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.section === name);
   });
 }

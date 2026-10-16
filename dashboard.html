@@ -24,73 +24,78 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-  <!-- Header -->
-  <header class="bg-go-primary text-white shadow-lg sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="assets/logo-go.svg" alt="GO" class="h-10">
-        <span class="text-lg font-semibold hidden sm:inline">UIC — Dashboard</span>
+  <!-- Layout: sidebar + main -->
+  <div class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="sidebar bg-go-primary text-white w-56 flex-shrink-0 flex flex-col sticky top-0 h-screen z-50">
+      <div class="flex items-center gap-3 px-4 py-4 border-b border-white/10">
+        <img src="assets/logo-go.svg" alt="GO" class="h-9">
+        <span class="text-base font-semibold">UIC</span>
       </div>
-      <button onclick="logout()" class="text-sm bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition">
-        Cerrar sesión
-      </button>
-    </div>
-  </header>
+      <nav class="flex-1 py-3">
+        <button class="sidebar-btn active" data-section="home" onclick="switchSection('home')">
+          Real vs Proyección
+        </button>
+        <button class="sidebar-btn" data-section="facturacion" onclick="switchSection('facturacion')">
+          Facturación
+        </button>
+        <button class="sidebar-btn" data-section="produccion" onclick="switchSection('produccion')">
+          Producción
+        </button>
+        <button class="sidebar-btn" data-section="proyeccion" onclick="switchSection('proyeccion')">
+          Proyección
+        </button>
+        <button class="sidebar-btn" data-section="sponsors" onclick="switchSection('sponsors')">
+          Patrocinadores
+        </button>
+      </nav>
+      <div class="px-4 py-3 border-t border-white/10">
+        <button onclick="logout()" class="w-full text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition">
+          Cerrar sesión
+        </button>
+      </div>
+    </aside>
 
-  <!-- Tabs -->
-  <nav class="bg-white border-b shadow-sm sticky top-[60px] z-40">
-    <div class="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
-      <button class="tab-btn active" data-section="home" onclick="switchSection('home')">
-        Real vs Proyección
-      </button>
-      <button class="tab-btn" data-section="facturacion" onclick="switchSection('facturacion')">
-        Facturación
-      </button>
-      <button class="tab-btn" data-section="produccion" onclick="switchSection('produccion')">
-        Producción
-      </button>
-      <button class="tab-btn" data-section="proyeccion" onclick="switchSection('proyeccion')">
-        Proyección
-      </button>
-      <button class="tab-btn" data-section="sponsors" onclick="switchSection('sponsors')">
-        Patrocinadores
-      </button>
-    </div>
-  </nav>
+    <!-- Main area -->
+    <div class="flex-1 min-w-0">
 
-  <!-- Loading spinner -->
-  <div id="loading" class="flex flex-col items-center justify-center py-32">
-    <div class="animate-spin rounded-full h-12 w-12 border-4 border-go-primary border-t-transparent mb-4"></div>
-    <p class="text-gray-500">Cargando datos...</p>
-  </div>
+      <!-- Loading spinner -->
+      <div id="loading" class="flex flex-col items-center justify-center py-32">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-go-primary border-t-transparent mb-4"></div>
+        <p class="text-gray-500">Cargando datos...</p>
+      </div>
 
-  <!-- Error state -->
-  <div id="error" class="hidden flex flex-col items-center justify-center py-32">
-    <p class="text-red-600 text-lg mb-4">No se pudieron cargar los datos. Verificá tu conexión.</p>
-    <button onclick="loadAllData()" class="bg-go-primary text-white px-6 py-2 rounded-lg hover:bg-blue-900 transition">
-      Reintentar
-    </button>
-  </div>
+      <!-- Error state -->
+      <div id="error" class="hidden flex flex-col items-center justify-center py-32">
+        <p class="text-red-600 text-lg mb-4">No se pudieron cargar los datos. Verificá tu conexión.</p>
+        <button onclick="loadAllData()" class="bg-go-primary text-white px-6 py-2 rounded-lg hover:bg-blue-900 transition">
+          Reintentar
+        </button>
+      </div>
 
-  <!-- Main content (5 sections, only one visible at a time) -->
-  <main id="content" class="hidden max-w-7xl mx-auto px-4 py-6">
-    <div id="section-home"></div>
-    <div id="section-facturacion" class="hidden"></div>
-    <div id="section-produccion" class="hidden"></div>
-    <div id="section-proyeccion" class="hidden"></div>
-    <div id="section-sponsors" class="hidden"></div>
-  </main>
+      <!-- Main content (5 sections, only one visible at a time) -->
+      <main id="content" class="hidden px-6 py-6">
+        <div id="section-home"></div>
+        <div id="section-facturacion" class="hidden"></div>
+        <div id="section-produccion" class="hidden"></div>
+        <div id="section-proyeccion" class="hidden"></div>
+        <div id="section-sponsors" class="hidden"></div>
+      </main>
+
+    </div><!-- /main area -->
+  </div><!-- /layout -->
 
   <!-- Scripts -->
-  <script src="js/auth.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/filters.js"></script>
-  <script src="js/sections/home.js"></script>
-  <script src="js/sections/facturacion.js"></script>
-  <script src="js/sections/produccion.js"></script>
-  <script src="js/sections/proyeccion.js"></script>
-  <script src="js/sections/sponsors.js"></script>
+  <script src="js/auth.js?v=2"></script>
+  <script src="js/data.js?v=3"></script>
+  <script src="js/charts.js?v=2"></script>
+  <script src="js/filters.js?v=2"></script>
+  <script src="js/sections/home.js?v=3"></script>
+  <script src="js/sections/facturacion.js?v=2"></script>
+  <script src="js/sections/produccion.js?v=2"></script>
+  <script src="js/sections/proyeccion.js?v=2"></script>
+  <script src="js/sections/sponsors.js?v=2"></script>
   <script>
     if (!requireAuth()) throw new Error('Not authenticated');
     loadAllData();

@@ -2,13 +2,15 @@ const SHEET_ID = '1Dv9VUVJc4APCQ3H0A1d0jLGL769enY_E2INKeQ6wrYA';
 const SHEET_URLS = {
   facturacion: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=535882626`,
   produccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=461266884`,
-  proyeccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1697903188`
+  proyeccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1697903188`,
+  costosReales: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1931354218`
 };
 
 const UIC_DATA = {
   facturacion: [],
   produccion: [],
   proyeccion: {},
+  costosReales: [],
   loaded: false
 };
 
@@ -157,7 +159,6 @@ function parseProyeccion(results) {
       yearData[year] = parseNumber(row[key]);
     });
 
-    // Also grab TOTAL 10A if present
     const totalKey = keys.find(k =>
       normalizeString(headerRow[k]).toUpperCase().includes('TOTAL')
     );
@@ -165,10 +166,34 @@ function parseProyeccion(results) {
       yearData.total = parseNumber(row[totalKey]);
     }
 
+    const hasValues = years.some(({ year }) => yearData[year] !== 0);
+    if (!hasValues && proy[matchedName]) return;
+
     proy[matchedName] = yearData;
   });
 
   return proy;
+}
+
+function parseCostosReales(results) {
+  const costos = [];
+  const headers = Object.keys(results.data[0] || {});
+  const monthCols = headers.filter(h => h && h !== headers[0]);
+
+  results.data.forEach(row => {
+    const concepto = normalizeString(row[headers[0]]);
+    if (!concepto || !concepto.toLowerCase().includes('total costos')) return;
+    monthCols.forEach(col => {
+      const match = col.match(/([a-záéíóú]+)-(\d{2})/i);
+      if (!match) return;
+      const mes = MONTH_ABBR[match[1].toLowerCase().substring(0, 3)] || 0;
+      const anio = 2000 + parseInt(match[2]);
+      if (mes > 0) {
+        costos.push({ anio, mes, total: parseNumber(row[col]) });
+      }
+    });
+  });
+  return costos;
 }
 
 function fetchCSV(url) {
@@ -189,15 +214,17 @@ async function loadAllData() {
   document.getElementById('content').classList.add('hidden');
 
   try {
-    const [factResult, prodResult, proyResult] = await Promise.all([
+    const [factResult, prodResult, proyResult, costosResult] = await Promise.all([
       fetchCSV(SHEET_URLS.facturacion),
       fetchCSV(SHEET_URLS.produccion),
-      fetchCSV(SHEET_URLS.proyeccion)
+      fetchCSV(SHEET_URLS.proyeccion),
+      fetchCSV(SHEET_URLS.costosReales)
     ]);
 
     UIC_DATA.facturacion = parseFacturacion(factResult);
     UIC_DATA.produccion = parseProduccion(prodResult);
     UIC_DATA.proyeccion = parseProyeccion(proyResult);
+    UIC_DATA.costosReales = parseCostosReales(costosResult);
     UIC_DATA.loaded = true;
 
     document.getElementById('loading').classList.add('hidden');

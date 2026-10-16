@@ -94,30 +94,31 @@ body {
   display: none;
 }
 
-/* Tabs */
-.tab-btn {
-  padding: 0.75rem 1.25rem;
+/* Sidebar */
+.sidebar-btn {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1.25rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #6b7280;
-  border-bottom: 2px solid transparent;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
   background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  border: none;
+  text-align: left;
   cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.2s, border-color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
-.tab-btn:hover {
-  color: var(--go-primary);
+.sidebar-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
 }
 
-.tab-btn.active {
-  color: var(--go-primary);
-  border-bottom-color: var(--go-primary);
+.sidebar-btn.active {
+  background: rgba(255,255,255,0.15);
+  color: white;
   font-weight: 600;
+  border-left: 3px solid var(--go-secondary);
 }
 
 /* KPI Cards */
