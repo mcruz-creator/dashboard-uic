@@ -11,7 +11,31 @@ const GO_COLORS = {
   ]
 };
 
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = '#4b5563';
+}
+
 const chartInstances = {};
+
+function formatAxisUSD(v) {
+  const a = Math.abs(v);
+  if (a >= 1e6) return (v / 1e6).toFixed(1).replace('.0', '') + 'M';
+  if (a >= 1e3) return (v / 1e3).toFixed(1).replace('.0', '') + 'K';
+  return String(v);
+}
+
+function shortLabel(label, max = 26) {
+  const s = String(label);
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+}
+
+const defaultLegend = {
+  position: 'top',
+  align: 'start',
+  labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 16, font: { family: 'Inter', size: 12 } }
+};
 
 function destroyChart(canvasId) {
   if (chartInstances[canvasId]) {
@@ -41,21 +65,26 @@ function formatNumber(num) {
 }
 
 const defaultTooltip = {
-  backgroundColor: 'rgba(0,0,0,0.8)',
-  titleFont: { family: 'Inter', size: 13 },
+  backgroundColor: 'rgba(0,31,63,0.92)',
+  titleFont: { family: 'Inter', size: 13, weight: '600' },
   bodyFont: { family: 'Inter', size: 12 },
-  padding: 10,
-  cornerRadius: 8
+  footerFont: { family: 'Inter', size: 12, weight: '600' },
+  padding: 12,
+  cornerRadius: 8,
+  boxPadding: 4,
+  usePointStyle: true
 };
 
 const defaultScales = {
   x: {
     grid: { display: false },
-    ticks: { font: { family: 'Inter', size: 11 } }
+    border: { color: '#e5e7eb' },
+    ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' }
   },
   y: {
-    grid: { color: '#f3f4f6' },
-    ticks: { font: { family: 'Inter', size: 11 } }
+    grid: { color: '#eef0f3' },
+    border: { display: false },
+    ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280', padding: 6 }
   }
 };
 
@@ -67,13 +96,17 @@ function createBarChart(canvasId, labels, datasets, options = {}) {
   const { horizontal, ...restOpts } = options;
   const chart = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets },
+    data: {
+      labels,
+      datasets: datasets.map(ds => ({ borderRadius: 4, maxBarThickness: horizontal ? 22 : 38, borderSkipped: false, ...ds }))
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { top: 4, right: 8 } },
       plugins: {
         tooltip: defaultTooltip,
-        legend: { display: datasets.length > 1, labels: { font: { family: 'Inter' } } }
+        legend: { display: datasets.length > 1, ...defaultLegend }
       },
       scales: {
         ...defaultScales,
@@ -99,11 +132,15 @@ function createLineChart(canvasId, labels, datasets, options = {}) {
   const ctx = el.getContext('2d');
   const chart = new Chart(ctx, {
     type: 'line',
-    data: { labels, datasets },
+    data: {
+      labels,
+      datasets: datasets.map(ds => ({ borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#fff', pointBorderWidth: 2, ...ds }))
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { tooltip: defaultTooltip, legend: { labels: { font: { family: 'Inter' } } } },
+      layout: { padding: { top: 4, right: 8 } },
+      plugins: { tooltip: defaultTooltip, legend: { ...defaultLegend } },
       scales: { ...defaultScales, y: { ...defaultScales.y, beginAtZero: true } },
       ...options
     }

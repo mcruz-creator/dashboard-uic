@@ -103,18 +103,20 @@ function renderCobradoChart(dim, data) {
   wrap.style.height = Math.max(300, entries.length * 28 + 70) + 'px';
 
   const stackedScales = {
-    x: { stacked: true, beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { family: 'Inter', size: 11 } } },
-    y: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } }
+    x: { stacked: true, beginAtZero: true, grid: { color: '#eef0f3' }, border: { display: false },
+         ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280', callback: v => formatAxisUSD(v) } },
+    y: { stacked: true, grid: { display: false }, border: { color: '#e5e7eb' },
+         ticks: { font: { family: 'Inter', size: 11 }, color: '#374151', callback(v) { return shortLabel(this.getLabelForValue(v)); } } }
   };
 
   createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), [
     { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
-    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.gray }
+    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: '#cbd5e1' }
   ], {
     horizontal: true,
     scales: stackedScales,
     plugins: {
-      legend: { display: true, labels: { font: { family: 'Inter' } } },
+      legend: { display: true, ...defaultLegend },
       tooltip: {
         ...defaultTooltip,
         callbacks: {
@@ -188,8 +190,20 @@ function updateFacturacion() {
       borderColor: GO_COLORS.primary,
       backgroundColor: 'rgba(0,51,102,0.1)',
       fill: true,
-      tension: 0.3
-    }]
+      tension: 0.35,
+      pointBorderColor: GO_COLORS.primary
+    }],
+    {
+      scales: {
+        x: { grid: { display: false }, border: { color: '#e5e7eb' }, ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' } },
+        y: { beginAtZero: true, grid: { color: '#eef0f3' }, border: { display: false },
+             ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280', padding: 6, callback: v => formatAxisUSD(v) } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...defaultTooltip, callbacks: { label: ctx => formatUSD(ctx.parsed.y) } }
+      }
+    }
   );
 
   FACT_DIMENSIONS.forEach(d => renderCobradoChart(d, data));
