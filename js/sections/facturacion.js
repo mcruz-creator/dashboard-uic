@@ -245,11 +245,13 @@ function updateFacturacion() {
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
-  createBarChart('chart-fact-monthly',
+  createLineChart('chart-fact-monthly',
     monthEntries.map(e => e.label),
     [
-      { label: 'Facturado', data: monthEntries.map(e => e.facturado), backgroundColor: GO_COLORS.primary },
-      { label: 'Cobrado', data: monthEntries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary }
+      { label: 'Facturado', data: monthEntries.map(e => e.facturado), borderColor: GO_COLORS.primary,
+        backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary },
+      { label: 'Cobrado', data: monthEntries.map(e => e.cobrado), borderColor: GO_COLORS.secondary,
+        backgroundColor: 'rgba(0,135,78,0.18)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.secondary }
     ],
     {
       scales: {
