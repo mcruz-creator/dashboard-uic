@@ -72,7 +72,7 @@ function getFilterValues(sectionId) {
 
 // Tab switching
 function switchSection(name) {
-  const sections = ['home', 'facturacion', 'produccion', 'proyeccion', 'sponsors'];
+  const sections = ['home', 'facturacion', 'produccion'];
   sections.forEach(s => {
     const el = document.getElementById('section-' + s);
     if (el) el.classList.toggle('hidden', s !== name);
@@ -147,7 +147,5 @@ function initDashboard() {
   renderHome();
   renderFacturacion();
   renderProduccion();
-  renderProyeccion();
-  renderSponsors();
   switchSection('home');
 }

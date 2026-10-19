@@ -43,12 +43,6 @@
         <button class="sidebar-btn" data-section="produccion" onclick="switchSection('produccion')">
           Producción
         </button>
-        <button class="sidebar-btn" data-section="proyeccion" onclick="switchSection('proyeccion')">
-          Proyección
-        </button>
-        <button class="sidebar-btn" data-section="sponsors" onclick="switchSection('sponsors')">
-          Patrocinadores
-        </button>
       </nav>
       <div class="px-4 py-3 border-t border-white/10">
         <button onclick="logout()" class="w-full text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition">
@@ -74,13 +68,11 @@
         </button>
       </div>
 
-      <!-- Main content (5 sections, only one visible at a time) -->
+      <!-- Main content (3 sections, only one visible at a time) -->
       <main id="content" class="hidden px-6 py-6">
         <div id="section-home"></div>
         <div id="section-facturacion" class="hidden"></div>
         <div id="section-produccion" class="hidden"></div>
-        <div id="section-proyeccion" class="hidden"></div>
-        <div id="section-sponsors" class="hidden"></div>
       </main>
 
     </div><!-- /main area -->
@@ -90,12 +82,10 @@
   <script src="js/auth.js?v=3"></script>
   <script src="js/data.js?v=4"></script>
   <script src="js/charts.js?v=3"></script>
-  <script src="js/filters.js?v=2"></script>
+  <script src="js/filters.js?v=3"></script>
   <script src="js/sections/home.js?v=7"></script>
   <script src="js/sections/facturacion.js?v=17"></script>
   <script src="js/sections/produccion.js?v=3"></script>
-  <script src="js/sections/proyeccion.js?v=2"></script>
-  <script src="js/sections/sponsors.js?v=2"></script>
   <script>
     if (!requireAuth()) throw new Error('Not authenticated');
     loadAllData();
