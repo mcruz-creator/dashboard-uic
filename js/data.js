@@ -39,6 +39,18 @@ function normalizeString(val) {
   return String(val).trim();
 }
 
+// Los vacíos de la planilla vienen como "--"
+function isEmptyCell(v) {
+  return !v || v === '--';
+}
+
+// CRO manda; si está vacío, se toma el patrocinador
+function resolveCliente(cro, patrocinador) {
+  if (!isEmptyCell(cro)) return cro;
+  if (!isEmptyCell(patrocinador)) return patrocinador;
+  return '(Sin dato)';
+}
+
 function parseFacturacion(results) {
   return results.data
     .filter(row => row['Protocolo'] && row['Protocolo'].trim())
@@ -89,6 +101,7 @@ function parseProduccion(results) {
       monitoreada: normalizeString(row['Monitoreada']),
       patrocinador: normalizeString(row['Patrocinador']),
       cro: normalizeString(row['CRO']),
+      cliente: resolveCliente(normalizeString(row['CRO']), normalizeString(row['Patrocinador'])),
       ip: normalizeString(row['Investigador Principal']),
       tipoAtencion: normalizeString(row['Tipo de Atención'] || row['Tipo de Atencion']),
       fases: normalizeString(row['Fases']),

@@ -31,6 +31,30 @@ function renderProduccion() {
       </div>
     </div>
     <div class="kpi-grid" id="prod-kpis"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="chart-container">
+        <h3>Visitas por Mes</h3>
+        <div style="height:300px"><canvas id="chart-prod-monthly"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <h3>Tipo de Atención</h3>
+        <div style="height:300px"><canvas id="chart-prod-tipo"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h3>Visitas por CRO / Patrocinador</h3>
+      <div id="wrap-prod-cliente" style="height:260px"><canvas id="chart-prod-cliente"></canvas></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="chart-container">
+        <h3>Top 10 Responsables</h3>
+        <div style="height:300px"><canvas id="chart-prod-resp"></canvas></div>
+      </div>
+      <div class="chart-container">
+        <h3>Top 10 Firmantes</h3>
+        <div style="height:300px"><canvas id="chart-prod-firm"></canvas></div>
+      </div>
+    </div>
     <div class="data-table-wrapper">
       <table class="data-table" id="prod-table">
         <thead>
@@ -48,26 +72,6 @@ function renderProduccion() {
         <tbody id="prod-tbody"></tbody>
       </table>
       <div class="pagination" id="prod-pagination"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-      <div class="chart-container">
-        <h3>Visitas por Mes</h3>
-        <div style="height:300px"><canvas id="chart-prod-monthly"></canvas></div>
-      </div>
-      <div class="chart-container">
-        <h3>Tipo de Atención</h3>
-        <div style="height:300px"><canvas id="chart-prod-tipo"></canvas></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-      <div class="chart-container">
-        <h3>Top 10 Responsables</h3>
-        <div style="height:300px"><canvas id="chart-prod-resp"></canvas></div>
-      </div>
-      <div class="chart-container">
-        <h3>Top 10 Firmantes</h3>
-        <div style="height:300px"><canvas id="chart-prod-firm"></canvas></div>
-      </div>
     </div>
   `;
 
@@ -136,6 +140,18 @@ function updateProduccion() {
   const byTipo = groupBy(data, 'tipoAtencion');
   const tipoLabels = Object.keys(byTipo);
   createDoughnutChart('chart-prod-tipo', tipoLabels, tipoLabels.map(t => byTipo[t].length));
+
+  // CRO (o patrocinador si no hay CRO)
+  const byCliente = groupBy(data, 'cliente');
+  const clienteEntries = Object.entries(byCliente)
+    .map(([k, v]) => ({ name: k, count: v.length }))
+    .sort((a, b) => b.count - a.count);
+  document.getElementById('wrap-prod-cliente').style.height = Math.max(140, clienteEntries.length * 34 + 60) + 'px';
+  createBarChart('chart-prod-cliente',
+    clienteEntries.map(e => e.name),
+    [{ label: 'Visitas', data: clienteEntries.map(e => e.count), backgroundColor: GO_COLORS.primary }],
+    { horizontal: true }
+  );
 
   // Top 10 responsables
   const byResp = groupBy(data, 'responsable');
