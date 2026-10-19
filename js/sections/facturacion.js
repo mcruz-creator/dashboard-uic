@@ -2,17 +2,29 @@ function renderFacturacion() {
   const container = document.getElementById('section-facturacion');
   const ips = uniqueValues(UIC_DATA.facturacion, 'ip');
   const protocolos = uniqueValues(UIC_DATA.facturacion, 'protocolo');
-  const anios = uniqueValues(UIC_DATA.facturacion, 'anio').map(String);
+
+  // Build period options from facturacion data
+  const allPeriods = [];
+  const seen = new Set();
+  UIC_DATA.facturacion.forEach(r => {
+    if (!r.anio || !r.mes) return;
+    const key = `${r.anio}-${r.mes}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      allPeriods.push({ value: key, year: r.anio, month: r.mes, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` });
+    }
+  });
+  allPeriods.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
 
   container.innerHTML = `
     <div class="filters-bar">
       <div class="filter-group">
-        <label>Año</label>
-        <select id="fact-anio" class="filter-select" onchange="updateFacturacion()"></select>
+        <label>Desde</label>
+        <select id="fact-desde" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
       <div class="filter-group">
-        <label>Mes</label>
-        <select id="fact-mes" class="filter-select" onchange="updateFacturacion()"></select>
+        <label>Hasta</label>
+        <select id="fact-hasta" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
       <div class="filter-group">
         <label>Investigador Principal</label>
@@ -57,11 +69,17 @@ function renderFacturacion() {
     </div>
   `;
 
-  populateSelect('fact-anio', anios);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: monthName(i + 1) }));
-  const mesSelect = document.getElementById('fact-mes');
-  mesSelect.innerHTML = '<option value="">Todos</option>' +
-    months.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+  const desdeSelect = document.getElementById('fact-desde');
+  const hastaSelect = document.getElementById('fact-hasta');
+  allPeriods.forEach(p => {
+    desdeSelect.innerHTML += `<option value="${p.value}">${p.label}</option>`;
+    hastaSelect.innerHTML += `<option value="${p.value}">${p.label}</option>`;
+  });
+  if (allPeriods.length > 0) {
+    desdeSelect.value = allPeriods[0].value;
+    hastaSelect.value = allPeriods[allPeriods.length - 1].value;
+  }
+
   populateSelect('fact-ip', ips);
   populateSelect('fact-proto', protocolos);
 
@@ -70,14 +88,20 @@ function renderFacturacion() {
 }
 
 function updateFacturacion() {
-  const anio = document.getElementById('fact-anio').value;
-  const mes = document.getElementById('fact-mes').value;
+  const desdeVal = document.getElementById('fact-desde').value;
+  const hastaVal = document.getElementById('fact-hasta').value;
   const ip = document.getElementById('fact-ip').value;
   const proto = document.getElementById('fact-proto').value;
 
-  let data = UIC_DATA.facturacion;
-  if (anio) data = data.filter(r => r.anio === parseInt(anio));
-  if (mes) data = data.filter(r => r.mes === parseInt(mes));
+  const [dY, dM] = desdeVal.split('-').map(Number);
+  const [hY, hM] = hastaVal.split('-').map(Number);
+  const desdeNum = dY * 100 + dM;
+  const hastaNum = hY * 100 + hM;
+
+  let data = UIC_DATA.facturacion.filter(r => {
+    const num = r.anio * 100 + r.mes;
+    return num >= desdeNum && num <= hastaNum;
+  });
   if (ip) data = data.filter(r => r.ip === ip);
   if (proto) data = data.filter(r => r.protocolo === proto);
 
@@ -148,13 +172,20 @@ function updateFacturacion() {
   }]);
 
   // Chart: monthly evolution
-  const byMonth = groupBy(data, 'mes');
-  const monthKeys = Object.keys(byMonth).map(Number).sort((a, b) => a - b);
+  const monthEntries = [];
+  data.forEach(r => {
+    const key = `${r.anio}-${String(r.mes).padStart(2, '0')}`;
+    const existing = monthEntries.find(e => e.key === key);
+    if (existing) { existing.total += r.total; }
+    else { monthEntries.push({ key, year: r.anio, month: r.mes, total: r.total, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` }); }
+  });
+  monthEntries.sort((a, b) => a.key.localeCompare(b.key));
+
   createLineChart('chart-fact-monthly',
-    monthKeys.map(m => monthName(m).substring(0, 3)),
+    monthEntries.map(e => e.label),
     [{
       label: 'Facturación USD',
-      data: monthKeys.map(m => sumBy(byMonth[m], 'total')),
+      data: monthEntries.map(e => e.total),
       borderColor: GO_COLORS.primary,
       backgroundColor: 'rgba(0,51,102,0.1)',
       fill: true,
