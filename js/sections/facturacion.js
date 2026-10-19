@@ -39,7 +39,7 @@ function renderFacturacion() {
   const dimCharts = FACT_DIMENSIONS.map(d => `
     <div class="chart-container">
       <h3>${d.title}</h3>
-      <div id="wrap-fact-${d.id}" style="height:300px"><canvas id="chart-fact-${d.id}"></canvas></div>
+      <div id="wrap-fact-${d.id}" style="height:200px"><canvas id="chart-fact-${d.id}"></canvas></div>
     </div>`).join('');
 
   container.innerHTML = `
@@ -66,7 +66,7 @@ function renderFacturacion() {
       <h3>Evolución Mensual</h3>
       <div style="height:300px"><canvas id="chart-fact-monthly"></canvas></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
       ${dimCharts}
     </div>
   `;
@@ -100,7 +100,7 @@ function renderCobradoChart(dim, data) {
     .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
 
   const wrap = document.getElementById(`wrap-fact-${dim.id}`);
-  wrap.style.height = Math.max(300, entries.length * 28 + 70) + 'px';
+  wrap.style.height = Math.max(140, entries.length * 34 + 80) + 'px';
 
   const stackedScales = {
     x: { stacked: true, beginAtZero: true, grid: { color: '#eef0f3' }, border: { display: false },
