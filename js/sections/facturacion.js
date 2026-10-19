@@ -180,23 +180,22 @@ function updateFacturacion() {
   const monthEntries = [];
   data.forEach(r => {
     const key = `${r.anio}-${String(r.mes).padStart(2, '0')}`;
-    const existing = monthEntries.find(e => e.key === key);
-    if (existing) { existing.total += r.goUic; }
-    else { monthEntries.push({ key, total: r.goUic, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` }); }
+    let e = monthEntries.find(x => x.key === key);
+    if (!e) {
+      e = { key, facturado: 0, cobrado: 0, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` };
+      monthEntries.push(e);
+    }
+    e.facturado += r.goUic;
+    if (isCobrado(r)) e.cobrado += r.goUic;
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
-  createLineChart('chart-fact-monthly',
+  createBarChart('chart-fact-monthly',
     monthEntries.map(e => e.label),
-    [{
-      label: 'Facturación UIC USD',
-      data: monthEntries.map(e => e.total),
-      borderColor: GO_COLORS.primary,
-      backgroundColor: 'rgba(0,51,102,0.1)',
-      fill: true,
-      tension: 0.35,
-      pointBorderColor: GO_COLORS.primary
-    }],
+    [
+      { label: 'Facturado', data: monthEntries.map(e => e.facturado), backgroundColor: GO_COLORS.primary },
+      { label: 'Cobrado', data: monthEntries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary }
+    ],
     {
       scales: {
         x: { grid: { display: false }, border: { color: '#e5e7eb' }, ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' } },
@@ -204,8 +203,17 @@ function updateFacturacion() {
              ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280', padding: 6, callback: v => formatAxisUSD(v) } }
       },
       plugins: {
-        legend: { display: false },
-        tooltip: { ...defaultTooltip, callbacks: { label: ctx => formatUSD(ctx.parsed.y) } }
+        legend: { display: true, ...defaultLegend },
+        tooltip: {
+          ...defaultTooltip,
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatUSD(ctx.parsed.y)}`,
+            footer: items => {
+              const e = monthEntries[items[0].dataIndex];
+              return `${e.facturado ? (e.cobrado / e.facturado * 100).toFixed(1) : '0.0'}% cobrado`;
+            }
+          }
+        }
       }
     }
   );
