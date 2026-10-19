@@ -21,8 +21,6 @@ function factKey(field, value) {
 
 function renderFacturacion() {
   const container = document.getElementById('section-facturacion');
-  const ips = uniqueValues(UIC_DATA.facturacion, 'ip');
-  const centros = uniqueValues(UIC_DATA.facturacion, 'centro');
 
   const allPeriods = [];
   const seen = new Set();
@@ -63,14 +61,6 @@ function renderFacturacion() {
         <label>Hasta</label>
         <select id="fact-hasta" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
-      <div class="filter-group">
-        <label>Investigador Principal</label>
-        <select id="fact-ip" class="filter-select" onchange="updateFacturacion()"></select>
-      </div>
-      <div class="filter-group">
-        <label>Institución</label>
-        <select id="fact-centro" class="filter-select" onchange="updateFacturacion()"></select>
-      </div>
     </div>
     <div class="kpi-grid" id="fact-kpis"></div>
     <div class="chart-container">
@@ -93,9 +83,6 @@ function renderFacturacion() {
     desdeSelect.value = allPeriods[0].value;
     hastaSelect.value = allPeriods[allPeriods.length - 1].value;
   }
-
-  populateSelect('fact-ip', ips);
-  populateSelect('fact-centro', centros);
 
   updateFacturacion();
 }
@@ -194,8 +181,6 @@ function renderCobradoChart(dim, data) {
 function updateFacturacion() {
   const desdeVal = document.getElementById('fact-desde').value;
   const hastaVal = document.getElementById('fact-hasta').value;
-  const ip = document.getElementById('fact-ip').value;
-  const centro = document.getElementById('fact-centro').value;
 
   const [dY, dM] = desdeVal.split('-').map(Number);
   const [hY, hM] = hastaVal.split('-').map(Number);
@@ -206,8 +191,6 @@ function updateFacturacion() {
     const num = r.anio * 100 + r.mes;
     return num >= desdeNum && num <= hastaNum;
   });
-  if (ip) data = data.filter(r => r.ip === ip);
-  if (centro) data = data.filter(r => r.centro === centro);
 
   const totalGoUic = sumBy(data, 'goUic');
   const totalCobrado = sumBy(data.filter(isCobrado), 'goUic');
@@ -220,7 +203,7 @@ function updateFacturacion() {
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Cobrado</div>
-      <div class="kpi-value">${formatUSD(totalCobrado)}</div>
+      <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatUSD(totalCobrado)}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">No cobrado</div>
