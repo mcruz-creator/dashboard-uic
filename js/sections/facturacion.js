@@ -1,5 +1,5 @@
 const FACT_DIMENSIONS = [
-  { id: 'centro', field: 'centro', title: 'Por Centro' },
+  { id: 'centro', field: 'centro', title: 'Por Institución' },
   { id: 'proto', field: 'protocolo', title: 'Por Protocolo' },
   { id: 'fase', field: 'fase', title: 'Por Fase' },
   { id: 'ip', field: 'ip', title: 'Por Investigador Principal' },
@@ -22,7 +22,7 @@ function factKey(field, value) {
 function renderFacturacion() {
   const container = document.getElementById('section-facturacion');
   const ips = uniqueValues(UIC_DATA.facturacion, 'ip');
-  const protocolos = uniqueValues(UIC_DATA.facturacion, 'protocolo');
+  const centros = uniqueValues(UIC_DATA.facturacion, 'centro');
 
   const allPeriods = [];
   const seen = new Set();
@@ -57,8 +57,8 @@ function renderFacturacion() {
         <select id="fact-ip" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
       <div class="filter-group">
-        <label>Protocolo</label>
-        <select id="fact-proto" class="filter-select" onchange="updateFacturacion()"></select>
+        <label>Institución</label>
+        <select id="fact-centro" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
     </div>
     <div class="kpi-grid" id="fact-kpis"></div>
@@ -83,7 +83,7 @@ function renderFacturacion() {
   }
 
   populateSelect('fact-ip', ips);
-  populateSelect('fact-proto', protocolos);
+  populateSelect('fact-centro', centros);
 
   updateFacturacion();
 }
@@ -134,7 +134,7 @@ function updateFacturacion() {
   const desdeVal = document.getElementById('fact-desde').value;
   const hastaVal = document.getElementById('fact-hasta').value;
   const ip = document.getElementById('fact-ip').value;
-  const proto = document.getElementById('fact-proto').value;
+  const centro = document.getElementById('fact-centro').value;
 
   const [dY, dM] = desdeVal.split('-').map(Number);
   const [hY, hM] = hastaVal.split('-').map(Number);
@@ -146,7 +146,7 @@ function updateFacturacion() {
     return num >= desdeNum && num <= hastaNum;
   });
   if (ip) data = data.filter(r => r.ip === ip);
-  if (proto) data = data.filter(r => r.protocolo === proto);
+  if (centro) data = data.filter(r => r.centro === centro);
 
   const totalGoUic = sumBy(data, 'goUic');
   const totalCobrado = sumBy(data.filter(isCobrado), 'goUic');
