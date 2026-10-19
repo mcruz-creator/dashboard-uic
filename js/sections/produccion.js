@@ -104,11 +104,6 @@ function updateProduccion() {
   // KPIs
   const totalVisitas = data.length;
   const pacientesUnicos = countDistinct(data, 'paciente');
-  const cumplidos = data.filter(r => {
-    const val = String(r.cumplimientoTurno ?? '').toLowerCase();
-    return val === 'sí' || val === 'si';
-  }).length;
-  const tasaCumpl = totalVisitas > 0 ? (cumplidos / totalVisitas) * 100 : 0;
   const mesesUnicos = new Set(data.map(r => `${r.anio}-${r.mes}`)).size;
   const visitasMes = mesesUnicos > 0 ? totalVisitas / mesesUnicos : totalVisitas;
 
@@ -120,10 +115,6 @@ function updateProduccion() {
     <div class="kpi-card">
       <div class="kpi-label">Pacientes Únicos</div>
       <div class="kpi-value">${formatNumber(pacientesUnicos)}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Tasa de Cumplimiento</div>
-      <div class="kpi-value">${tasaCumpl.toFixed(1)}%</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Visitas/Mes Promedio</div>
