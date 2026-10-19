@@ -1,6 +1,6 @@
 const FACT_DIMENSIONS = [
   { id: 'centro', field: 'centro', title: 'Por Institución', donut: true },
-  { id: 'proto', field: 'protocolo', title: 'Por Protocolo' },
+  { id: 'proto', field: 'protocolo', title: 'Por Protocolo', table: true },
   { id: 'fase', field: 'fase', title: 'Por Fase', donut: true },
   { id: 'ip', field: 'ip', title: 'Por Investigador Principal' },
   { id: 'esp', field: 'especialidad', title: 'Por Especialidad' },
@@ -36,13 +36,21 @@ function renderFacturacion() {
   });
   allPeriods.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
 
-  const dimCard = d => `
+  const dimCard = d => d.table ? `
+    <div class="data-table-wrapper" style="margin-bottom:1.5rem">
+      <table class="data-table">
+        <thead>
+          <tr><th>Protocolo</th><th>Facturación UIC</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>
+        </thead>
+        <tbody id="tbody-fact-${d.id}"></tbody>
+      </table>
+    </div>` : `
     <div class="chart-container">
       <h3>${d.title}</h3>
       <div id="wrap-fact-${d.id}" style="height:200px"><canvas id="chart-fact-${d.id}"></canvas></div>
     </div>`;
   const donutCharts = FACT_DIMENSIONS.filter(d => d.donut).map(dimCard).join('');
-  const barOrder = ['ip', 'proto', 'esp'];
+  const barOrder = ['ip', 'esp', 'proto'];
   const barCharts = barOrder.map(id => FACT_DIMENSIONS.find(d => d.id === id)).map(dimCard).join('');
 
   container.innerHTML = `
@@ -102,6 +110,25 @@ function renderCobradoChart(dim, data) {
   });
   const entries = Object.values(groups)
     .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
+
+  if (dim.table) {
+    const pct = (c, t) => `${t ? (c / t * 100).toFixed(1) : '0.0'}%`;
+    const tot = entries.reduce((a, e) => ({ c: a.c + e.cobrado, p: a.p + e.pendiente }), { c: 0, p: 0 });
+    document.getElementById(`tbody-fact-${dim.id}`).innerHTML = entries.map(e => `<tr>
+      <td>${e.label}</td>
+      <td>${formatUSD(e.cobrado + e.pendiente)}</td>
+      <td>${formatUSD(e.cobrado)}</td>
+      <td>${formatUSD(e.pendiente)}</td>
+      <td>${pct(e.cobrado, e.cobrado + e.pendiente)}</td>
+    </tr>`).join('') + `<tr class="totals-row">
+      <td><strong>TOTAL</strong></td>
+      <td>${formatUSD(tot.c + tot.p)}</td>
+      <td>${formatUSD(tot.c)}</td>
+      <td>${formatUSD(tot.p)}</td>
+      <td>${pct(tot.c, tot.c + tot.p)}</td>
+    </tr>`;
+    return;
+  }
 
   const wrap = document.getElementById(`wrap-fact-${dim.id}`);
 
