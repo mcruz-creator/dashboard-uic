@@ -48,7 +48,7 @@ function renderProduccion() {
         <div style="height:300px"><canvas id="chart-prod-monthly"></canvas></div>
       </div>
       <div class="chart-container">
-        <h3>Tipo de Atención</h3>
+        <h3>Tipo de Visita</h3>
         <div style="height:300px"><canvas id="chart-prod-tipo"></canvas></div>
       </div>
     </div>
@@ -157,9 +157,24 @@ function updateProduccion() {
     [{ label: 'Visitas', data: monthKeys.map(m => byMonth[m].length), backgroundColor: GO_COLORS.primary }]
   );
 
-  const byTipo = groupBy(data, 'tipoAtencion');
-  const tipoLabels = Object.keys(byTipo);
-  createDoughnutChart('chart-prod-tipo', tipoLabels, tipoLabels.map(t => byTipo[t].length));
+  const byTipo = groupBy(data, 'tipoVisita');
+  const tipoEntries = Object.entries(byTipo)
+    .map(([k, v]) => ({ name: k || '(Sin dato)', count: v.length }))
+    .sort((a, b) => b.count - a.count);
+  const tipoTotal = tipoEntries.reduce((t, e) => t + e.count, 0);
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  createDoughnutChart('chart-prod-tipo', tipoEntries.map(e => cap(e.name)), tipoEntries.map(e => e.count), {
+    cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { family: 'Inter', size: 12 } } },
+      tooltip: {
+        ...defaultTooltip,
+        callbacks: {
+          label: ctx => `${formatNumber(ctx.parsed)} visitas (${tipoTotal ? (ctx.parsed / tipoTotal * 100).toFixed(1) : '0.0'}%)`
+        }
+      }
+    }
+  });
 
   // CRO (o patrocinador si no hay CRO)
   const byCliente = groupBy(data, 'cliente');
