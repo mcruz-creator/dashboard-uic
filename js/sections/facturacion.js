@@ -218,7 +218,8 @@ function updateFacturacion() {
   const totalCobrado = sumBy(data.filter(isCobrado), medida.field);
   const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
   const totalVisitas = sumBy(data, 'visitas');
-  const ticketPromedio = totalVisitas ? totalGoUic / totalVisitas : 0;
+  // Ticket promedio: siempre columna Total / Visitas, independiente del selector de facturación
+  const ticketPromedio = totalVisitas ? sumBy(data, 'total') / totalVisitas : 0;
 
   document.getElementById('fact-kpis').innerHTML = `
     <div class="kpi-card">
