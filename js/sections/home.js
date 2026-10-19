@@ -48,6 +48,13 @@ function renderHome() {
         <label>Hasta</label>
         <select id="home-hasta" class="filter-select" onchange="updateHome()"></select>
       </div>
+      <div class="filter-group">
+        <label>Proyección</label>
+        <select id="home-proyeccion" class="filter-select" onchange="updateHome()">
+          <option value="si" selected>Sí</option>
+          <option value="no">No</option>
+        </select>
+      </div>
     </div>
     <div class="data-table-wrapper" style="overflow-x:auto" id="home-summary-table"></div>
   `;
@@ -80,6 +87,7 @@ function renderHome() {
 function updateHome() {
   const desde = parsePeriod(document.getElementById('home-desde').value);
   const hasta = parsePeriod(document.getElementById('home-hasta').value);
+  const proySi = document.getElementById('home-proyeccion').value === 'si';
   const hastaNum = periodToNum(hasta.year, hasta.month);
 
   const monthsInRange = [];
@@ -91,22 +99,6 @@ function updateHome() {
   }
 
   const N = monthsInRange.length;
-  const N2 = N * 2;
-
-  // Build x2 period
-  const monthsX2 = [];
-  y = desde.year;
-  m = desde.month;
-  for (let i = 0; i < N2; i++) {
-    monthsX2.push({ year: y, month: m });
-    m++;
-    if (m > 12) { m = 1; y++; }
-  }
-
-  const endX2 = monthsX2[monthsX2.length - 1];
-  const desdeLabel = periodLabel(desde.year, desde.month);
-  const hastaLabel = periodLabel(hasta.year, hasta.month);
-  const hastaX2Label = periodLabel(endX2.year, endX2.month);
 
   // Helpers
   function sumFactField(field, months) {
@@ -142,7 +134,7 @@ function updateHome() {
     }, 0);
   }
 
-  // Define rows with how to get their values
+  // Define rows
   const rowDefs = [
     { label: 'Facturación Total GO UIC', type: 'fact', field: 'total', projKey: 'Facturación Total GO UIC', bold: true },
     { label: 'DISTRIBUCIÓN — GRUPO OROÑO', type: 'section' },
@@ -159,7 +151,6 @@ function updateHome() {
     { label: 'Margen EBITDA', type: 'pct', calc: (vals) => vals['goAce'] > 0 ? (vals['ebitda'] / vals['goAce'] * 100) : 0, calcKeys: ['goAce', 'ebitda'] }
   ];
 
-  // Internal keys for calc dependencies
   const keyMap = {
     'OH Instituciones GO': 'ohInst',
     'GO ACE — UIC': 'goAce',
@@ -167,120 +158,107 @@ function updateHome() {
     'EBITDA UIC': 'ebitda'
   };
 
-  // Compute values for a set of months
   function computeColumn(months) {
     const vals = {};
     const results = [];
-
     rowDefs.forEach(row => {
-      if (row.type === 'section') {
-        results.push(null);
-        return;
-      }
-
+      if (row.type === 'section') { results.push(null); return; }
       let value = 0;
-      if (row.type === 'fact') {
-        value = sumFactField(row.field, months);
-      } else if (row.type === 'costo') {
-        value = sumCostoConcepto(row.concepto, months);
-      } else if (row.type === 'calc' || row.type === 'pct') {
-        value = row.calc(vals);
-      }
-
+      if (row.type === 'fact') value = sumFactField(row.field, months);
+      else if (row.type === 'costo') value = sumCostoConcepto(row.concepto, months);
+      else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
       const key = keyMap[row.label];
       if (key) vals[key] = value;
-
       results.push(value);
     });
-
     return results;
   }
 
-  // Compute values per individual month
   function computeMonthColumn(year, month) {
     const vals = {};
     const results = [];
-
     rowDefs.forEach(row => {
-      if (row.type === 'section') {
-        results.push(null);
-        return;
-      }
-
+      if (row.type === 'section') { results.push(null); return; }
       let value = 0;
-      if (row.type === 'fact') {
-        value = sumFactFieldMonth(row.field, year, month);
-      } else if (row.type === 'costo') {
-        value = sumCostoConceptoMonth(row.concepto, year, month);
-      } else if (row.type === 'calc' || row.type === 'pct') {
-        value = row.calc(vals);
-      }
-
+      if (row.type === 'fact') value = sumFactFieldMonth(row.field, year, month);
+      else if (row.type === 'costo') value = sumCostoConceptoMonth(row.concepto, year, month);
+      else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
       const key = keyMap[row.label];
       if (key) vals[key] = value;
-
       results.push(value);
     });
-
     return results;
   }
 
-  // Compute projection column for a set of months
   function computeProjColumn(months) {
     const vals = {};
     const results = [];
-
     rowDefs.forEach(row => {
-      if (row.type === 'section') {
-        results.push(null);
-        return;
-      }
-
+      if (row.type === 'section') { results.push(null); return; }
       let value = 0;
-      if (row.type === 'fact' || row.type === 'costo') {
-        value = projForMonths(row.projKey, months);
-      } else if (row.type === 'calc' || row.type === 'pct') {
-        value = row.calc(vals);
-      }
-
+      if (row.type === 'fact' || row.type === 'costo') value = projForMonths(row.projKey, months);
+      else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
       const key = keyMap[row.label];
       if (key) vals[key] = value;
-
       results.push(value);
     });
-
     return results;
   }
 
-  // Compute all columns
+  // Per-month columns (always shown)
   const monthColumns = monthsInRange.map(({ year, month }) => ({
     label: periodLabel(year, month),
     values: computeMonthColumn(year, month)
   }));
 
   const realTotal = computeColumn(monthsInRange);
-  const est6mRaw = realTotal.map(v => v === null ? null : v * 2);
+  const desdeLabel = periodLabel(desde.year, desde.month);
+  const hastaLabel = periodLabel(hasta.year, hasta.month);
 
-  // Recalculate percentage rows from estimated values instead of doubling
-  const est6m = est6mRaw.slice();
-  const estVals = {};
-  rowDefs.forEach((row, i) => {
-    if (row.type === 'section') return;
-    const key = keyMap[row.label];
-    if (key) estVals[key] = est6m[i];
-    if (row.type === 'pct') {
-      est6m[i] = row.calc(estVals);
+  let compReal, compProy, compMonths, compLabel, compRealHeader, compProyHeader;
+
+  if (proySi) {
+    // Sí: estimate 2N months (real x2), project 2N months
+    const N2 = N * 2;
+    const monthsX2 = [];
+    y = desde.year; m = desde.month;
+    for (let i = 0; i < N2; i++) {
+      monthsX2.push({ year: y, month: m });
+      m++; if (m > 12) { m = 1; y++; }
     }
-  });
+    const endX2 = monthsX2[monthsX2.length - 1];
+    const hastaX2Label = periodLabel(endX2.year, endX2.month);
 
-  const proy6m = computeProjColumn(monthsX2);
-  const diff = est6m.map((v, i) => {
-    if (v === null || proy6m[i] === null) return null;
-    return v - proy6m[i];
+    const est6mRaw = realTotal.map(v => v === null ? null : v * 2);
+    const est6m = est6mRaw.slice();
+    const estVals = {};
+    rowDefs.forEach((row, i) => {
+      if (row.type === 'section') return;
+      const key = keyMap[row.label];
+      if (key) estVals[key] = est6m[i];
+      if (row.type === 'pct') est6m[i] = row.calc(estVals);
+    });
+
+    compReal = est6m;
+    compProy = computeProjColumn(monthsX2);
+    compRealHeader = `${N2}m Est.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span>`;
+    compProyHeader = `${N2}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span>`;
+  } else {
+    // No: real N months vs projected N months (same period, respecting year boundaries)
+    compReal = realTotal;
+    compProy = computeProjColumn(monthsInRange);
+    compRealHeader = `${N}m Real<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaLabel}</span>`;
+    compProyHeader = `${N}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaLabel}</span>`;
+  }
+
+  const diff = compReal.map((v, i) => {
+    if (v === null || compProy[i] === null) return null;
+    return v - compProy[i];
   });
 
   // Build header
   const monthHeaders = monthColumns.map(c => `<th style="text-align:right;white-space:nowrap">${c.label}</th>`).join('');
+  const diffSubLabel = proySi ? 'Est. vs Proy.' : 'Real vs Proy.';
 
   // Build rows
   const tableRows = rowDefs.map((row, i) => {
@@ -300,16 +278,16 @@ function updateHome() {
     const diffColor = isPct ? '' : (diffVal >= 0 ? 'color:var(--go-success)' : 'color:var(--go-error)');
     const diffPrefix = (!isPct && diffVal >= 0) ? '+' : '';
 
-    const proyVal = proy6m[i];
-    const varPct = (proyVal && proyVal !== 0 && !isPct) ? ((est6m[i] - proyVal) / Math.abs(proyVal) * 100) : null;
+    const proyVal = compProy[i];
+    const varPct = (proyVal && proyVal !== 0 && !isPct) ? ((compReal[i] - proyVal) / Math.abs(proyVal) * 100) : null;
     const varColor = varPct !== null ? (varPct >= 0 ? 'color:var(--go-success)' : 'color:var(--go-error)') : '';
     const varText = varPct !== null ? ((varPct >= 0 ? '+' : '') + varPct.toFixed(1) + '%') : '—';
 
     return `<tr style="${style}">
       <td style="${indent};white-space:nowrap">${row.label}</td>
       ${monthCells}
-      <td style="text-align:right;font-weight:600">${fmt(est6m[i])}</td>
-      <td style="text-align:right">${fmt(proy6m[i])}</td>
+      <td style="text-align:right;font-weight:600">${fmt(compReal[i])}</td>
+      <td style="text-align:right">${fmt(compProy[i])}</td>
       <td style="text-align:right;font-weight:600;${diffColor}">${diffPrefix}${fmt(diffVal)}</td>
       <td style="text-align:right;font-weight:600;${varColor}">${varText}</td>
     </tr>`;
@@ -321,10 +299,10 @@ function updateHome() {
         <tr>
           <th style="position:sticky;left:0;background:#f9fafb;z-index:2">Concepto</th>
           ${monthHeaders}
-          <th style="text-align:right;white-space:nowrap">${N2}m Est.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span></th>
-          <th style="text-align:right;white-space:nowrap">${N2}m Proy.<br><span style="font-weight:400;font-size:0.7rem">${desdeLabel}—${hastaX2Label}</span></th>
-          <th style="text-align:right;white-space:nowrap">Diferencia<br><span style="font-weight:400;font-size:0.7rem">Est. vs Proy.</span></th>
-          <th style="text-align:right;white-space:nowrap">Var. %<br><span style="font-weight:400;font-size:0.7rem">Est. vs Proy.</span></th>
+          <th style="text-align:right;white-space:nowrap">${compRealHeader}</th>
+          <th style="text-align:right;white-space:nowrap">${compProyHeader}</th>
+          <th style="text-align:right;white-space:nowrap">Diferencia<br><span style="font-weight:400;font-size:0.7rem">${diffSubLabel}</span></th>
+          <th style="text-align:right;white-space:nowrap">Var. %<br><span style="font-weight:400;font-size:0.7rem">${diffSubLabel}</span></th>
         </tr>
       </thead>
       <tbody>${tableRows}</tbody>
