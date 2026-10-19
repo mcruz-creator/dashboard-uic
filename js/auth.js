@@ -1,6 +1,9 @@
+const AUTH_USERS = [
+  { email: 'ymargaria@grupoorono.com.ar', hash: '17be33037dca00291e22adeca12afaaa66dad61090ae094a27f26950ac8d3426' },
+  { email: 'mcruz@grupoorono.com.ar', hash: '4e72b4c644a931a2f3a66bd7ebd6cc799eb6fb9e1afc9fc0ead61d0bd8fd8f6e' }
+];
+
 const AUTH_CONFIG = {
-  expectedUser: 'ymargaria@grupoorono.com.ar',
-  passwordHash: '17be33037dca00291e22adeca12afaaa66dad61090ae094a27f26950ac8d3426',
   sessionKey: 'uic_auth',
   tokenValue: 'authenticated'
 };
@@ -14,9 +17,11 @@ async function hashPassword(password) {
 }
 
 async function login(user, password) {
-  if (user.trim().toLowerCase() !== AUTH_CONFIG.expectedUser) return false;
+  const email = user.trim().toLowerCase();
+  const found = AUTH_USERS.find(u => u.email === email);
+  if (!found) return false;
   const hash = await hashPassword(password);
-  if (hash === AUTH_CONFIG.passwordHash) {
+  if (hash === found.hash) {
     sessionStorage.setItem(AUTH_CONFIG.sessionKey, AUTH_CONFIG.tokenValue);
     return true;
   }
