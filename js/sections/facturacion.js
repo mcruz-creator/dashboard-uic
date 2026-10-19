@@ -1,9 +1,29 @@
+const FACT_DIMENSIONS = [
+  { id: 'centro', field: 'centro', title: 'Por Centro' },
+  { id: 'proto', field: 'protocolo', title: 'Por Protocolo' },
+  { id: 'fase', field: 'fase', title: 'Por Fase' },
+  { id: 'ip', field: 'ip', title: 'Por Investigador Principal' },
+  { id: 'esp', field: 'especialidad', title: 'Por Especialidad' },
+  { id: 'tipo', field: 'tipo', title: 'Por Tipo' }
+];
+
+function isCobrado(r) {
+  const v = (r.cobrado || '').trim().toLowerCase();
+  return v === 'si' || v === 'sí';
+}
+
+function factKey(field, value) {
+  const v = value || '(Sin dato)';
+  return field === 'especialidad'
+    ? v.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ')
+    : v;
+}
+
 function renderFacturacion() {
   const container = document.getElementById('section-facturacion');
   const ips = uniqueValues(UIC_DATA.facturacion, 'ip');
   const protocolos = uniqueValues(UIC_DATA.facturacion, 'protocolo');
 
-  // Build period options from facturacion data
   const allPeriods = [];
   const seen = new Set();
   UIC_DATA.facturacion.forEach(r => {
@@ -15,6 +35,12 @@ function renderFacturacion() {
     }
   });
   allPeriods.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
+
+  const dimCharts = FACT_DIMENSIONS.map(d => `
+    <div class="chart-container">
+      <h3>${d.title}</h3>
+      <div id="wrap-fact-${d.id}" style="height:300px"><canvas id="chart-fact-${d.id}"></canvas></div>
+    </div>`).join('');
 
   container.innerHTML = `
     <div class="filters-bar">
@@ -36,19 +62,12 @@ function renderFacturacion() {
       </div>
     </div>
     <div class="kpi-grid" id="fact-kpis"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-      <div class="chart-container">
-        <h3>Facturación por IP</h3>
-        <div style="height:300px"><canvas id="chart-fact-ip"></canvas></div>
-      </div>
-      <div class="chart-container">
-        <h3>Top 10 Protocolos</h3>
-        <div style="height:300px"><canvas id="chart-fact-proto"></canvas></div>
-      </div>
-    </div>
     <div class="chart-container">
       <h3>Evolución Mensual</h3>
       <div style="height:300px"><canvas id="chart-fact-monthly"></canvas></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      ${dimCharts}
     </div>
   `;
 
@@ -69,6 +88,48 @@ function renderFacturacion() {
   updateFacturacion();
 }
 
+function renderCobradoChart(dim, data) {
+  const groups = {};
+  data.forEach(r => {
+    const key = factKey(dim.field, r[dim.field]);
+    if (!groups[key]) groups[key] = { label: r[dim.field] || '(Sin dato)', cobrado: 0, pendiente: 0 };
+    if (isCobrado(r)) groups[key].cobrado += r.goUic;
+    else groups[key].pendiente += r.goUic;
+  });
+  const entries = Object.values(groups)
+    .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
+
+  const wrap = document.getElementById(`wrap-fact-${dim.id}`);
+  wrap.style.height = Math.max(300, entries.length * 28 + 70) + 'px';
+
+  const stackedScales = {
+    x: { stacked: true, beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { family: 'Inter', size: 11 } } },
+    y: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } }
+  };
+
+  createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), [
+    { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
+    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.gray }
+  ], {
+    horizontal: true,
+    scales: stackedScales,
+    plugins: {
+      legend: { display: true, labels: { font: { family: 'Inter' } } },
+      tooltip: {
+        ...defaultTooltip,
+        callbacks: {
+          label: ctx => `${ctx.dataset.label}: ${formatUSD(ctx.parsed.x)}`,
+          footer: items => {
+            const e = entries[items[0].dataIndex];
+            const total = e.cobrado + e.pendiente;
+            return `Total: ${formatUSD(total)} — ${total ? (e.cobrado / total * 100).toFixed(1) : '0.0'}% cobrado`;
+          }
+        }
+      }
+    }
+  });
+}
+
 function updateFacturacion() {
   const desdeVal = document.getElementById('fact-desde').value;
   const hastaVal = document.getElementById('fact-hasta').value;
@@ -87,41 +148,35 @@ function updateFacturacion() {
   if (ip) data = data.filter(r => r.ip === ip);
   if (proto) data = data.filter(r => r.protocolo === proto);
 
-  // KPIs
   const totalGoUic = sumBy(data, 'goUic');
+  const totalCobrado = sumBy(data.filter(isCobrado), 'goUic');
+  const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
 
   document.getElementById('fact-kpis').innerHTML = `
     <div class="kpi-card">
       <div class="kpi-label">Facturación UIC</div>
       <div class="kpi-value">${formatUSD(totalGoUic)}</div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cobrado</div>
+      <div class="kpi-value">${formatUSD(totalCobrado)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">No cobrado</div>
+      <div class="kpi-value">${formatUSD(totalGoUic - totalCobrado)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">% Cobrado</div>
+      <div class="kpi-value">${formatPct(pctCobrado)}</div>
+    </div>
   `;
 
-  // Chart: by IP
-  const byIp = groupBy(data, 'ip');
-  const ipLabels = Object.keys(byIp).sort((a, b) => sumBy(byIp[b], 'goUic') - sumBy(byIp[a], 'goUic'));
-  const ipValues = ipLabels.map(k => sumBy(byIp[k], 'goUic'));
-  createBarChart('chart-fact-ip', ipLabels, [{
-    label: 'Facturación UIC USD', data: ipValues, backgroundColor: GO_COLORS.primary
-  }], { horizontal: true });
-
-  // Chart: top 10 protocols
-  const byProto = groupBy(data, 'protocolo');
-  const protoEntries = Object.entries(byProto)
-    .map(([k, v]) => ({ name: k, total: sumBy(v, 'goUic') }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
-  createBarChart('chart-fact-proto', protoEntries.map(e => e.name), [{
-    label: 'Facturación UIC USD', data: protoEntries.map(e => e.total), backgroundColor: GO_COLORS.secondary
-  }]);
-
-  // Chart: monthly evolution
   const monthEntries = [];
   data.forEach(r => {
     const key = `${r.anio}-${String(r.mes).padStart(2, '0')}`;
     const existing = monthEntries.find(e => e.key === key);
     if (existing) { existing.total += r.goUic; }
-    else { monthEntries.push({ key, year: r.anio, month: r.mes, total: r.goUic, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` }); }
+    else { monthEntries.push({ key, total: r.goUic, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` }); }
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
@@ -136,4 +191,6 @@ function updateFacturacion() {
       tension: 0.3
     }]
   );
+
+  FACT_DIMENSIONS.forEach(d => renderCobradoChart(d, data));
 }
