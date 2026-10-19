@@ -58,8 +58,8 @@ function renderProduccion() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
       <div class="chart-container">
-        <h3>Top 10 Responsables</h3>
-        <div style="height:300px"><canvas id="chart-prod-resp"></canvas></div>
+        <h3>Visitas por Lugar de Turno</h3>
+        <div style="height:300px"><canvas id="chart-prod-lugar"></canvas></div>
       </div>
       <div class="chart-container">
         <h3>Top 10 Protocolos</h3>
@@ -188,17 +188,24 @@ function updateProduccion() {
     { horizontal: true }
   );
 
-  // Top 10 responsables
-  const byResp = groupBy(data, 'responsable');
-  const respEntries = Object.entries(byResp)
-    .map(([k, v]) => ({ name: k, count: v.length }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-  createBarChart('chart-prod-resp',
-    respEntries.map(e => e.name),
-    [{ label: 'Visitas', data: respEntries.map(e => e.count), backgroundColor: GO_COLORS.secondary }],
-    { horizontal: true }
-  );
+  // Lugar de turno
+  const byLugar = groupBy(data, 'lugarTurno');
+  const lugarEntries = Object.entries(byLugar)
+    .map(([k, v]) => ({ name: k || '(Sin dato)', count: v.length }))
+    .sort((a, b) => b.count - a.count);
+  const lugarTotal = lugarEntries.reduce((t, e) => t + e.count, 0);
+  createDoughnutChart('chart-prod-lugar', lugarEntries.map(e => e.name), lugarEntries.map(e => e.count), {
+    cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { family: 'Inter', size: 12 } } },
+      tooltip: {
+        ...defaultTooltip,
+        callbacks: {
+          label: ctx => `${formatNumber(ctx.parsed)} visitas (${lugarTotal ? (ctx.parsed / lugarTotal * 100).toFixed(1) : '0.0'}%)`
+        }
+      }
+    }
+  });
 
   // Top 10 protocolos
   const byProto = groupBy(data, 'protocolo');
