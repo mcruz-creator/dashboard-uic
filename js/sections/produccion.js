@@ -62,8 +62,8 @@ function renderProduccion() {
         <div style="height:300px"><canvas id="chart-prod-resp"></canvas></div>
       </div>
       <div class="chart-container">
-        <h3>Top 10 Firmantes</h3>
-        <div style="height:300px"><canvas id="chart-prod-firm"></canvas></div>
+        <h3>Top 10 Protocolos</h3>
+        <div style="height:300px"><canvas id="chart-prod-proto"></canvas></div>
       </div>
     </div>
     <div class="data-table-wrapper">
@@ -185,15 +185,15 @@ function updateProduccion() {
     { horizontal: true }
   );
 
-  // Top 10 firmantes
-  const byFirm = groupBy(data, 'firmante');
-  const firmEntries = Object.entries(byFirm)
+  // Top 10 protocolos
+  const byProto = groupBy(data, 'protocolo');
+  const protoEntries = Object.entries(byProto)
     .map(([k, v]) => ({ name: k, count: v.length }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
-  createBarChart('chart-prod-firm',
-    firmEntries.map(e => e.name),
-    [{ label: 'Visitas', data: firmEntries.map(e => e.count), backgroundColor: GO_COLORS.primaryLight }],
+  createBarChart('chart-prod-proto',
+    protoEntries.map(e => e.name),
+    [{ label: 'Visitas', data: protoEntries.map(e => e.count), backgroundColor: GO_COLORS.primaryLight }],
     { horizontal: true }
   );
 }
