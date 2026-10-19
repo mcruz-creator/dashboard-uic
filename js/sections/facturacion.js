@@ -217,6 +217,8 @@ function updateFacturacion() {
   const totalGoUic = sumBy(data, medida.field);
   const totalCobrado = sumBy(data.filter(isCobrado), medida.field);
   const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
+  const totalVisitas = sumBy(data, 'visitas');
+  const ticketPromedio = totalVisitas ? totalGoUic / totalVisitas : 0;
 
   document.getElementById('fact-kpis').innerHTML = `
     <div class="kpi-card">
@@ -234,6 +236,10 @@ function updateFacturacion() {
     <div class="kpi-card">
       <div class="kpi-label">% Cobrado</div>
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatPct(pctCobrado)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ticket Promedio</div>
+      <div class="kpi-value">${formatUSD(ticketPromedio)}</div>
     </div>
   `;
 
