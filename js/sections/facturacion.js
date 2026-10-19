@@ -36,11 +36,14 @@ function renderFacturacion() {
   });
   allPeriods.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
 
-  const dimCharts = FACT_DIMENSIONS.map(d => `
+  const dimCard = d => `
     <div class="chart-container">
       <h3>${d.title}</h3>
       <div id="wrap-fact-${d.id}" style="height:200px"><canvas id="chart-fact-${d.id}"></canvas></div>
-    </div>`).join('');
+    </div>`;
+  const BIG = ['proto', 'esp'];
+  const smallCharts = FACT_DIMENSIONS.filter(d => !BIG.includes(d.id)).map(dimCard).join('');
+  const bigCharts = FACT_DIMENSIONS.filter(d => BIG.includes(d.id)).map(dimCard).join('');
 
   container.innerHTML = `
     <div class="filters-bar">
@@ -67,8 +70,9 @@ function renderFacturacion() {
       <div style="height:300px"><canvas id="chart-fact-monthly"></canvas></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
-      ${dimCharts}
+      ${smallCharts}
     </div>
+    ${bigCharts}
   `;
 
   const desdeSelect = document.getElementById('fact-desde');
