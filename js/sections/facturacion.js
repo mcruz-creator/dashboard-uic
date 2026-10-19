@@ -9,7 +9,7 @@ const FACT_DIMENSIONS = [
 
 const FACT_MEDIDAS = {
   goUic: { label: 'Go UIC', title: 'Facturación UIC', field: 'goUic' },
-  overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Over Head', field: 'overheadPct' }
+  overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Instituciones', field: 'overheadPct' }
 };
 
 function factMedida() {
