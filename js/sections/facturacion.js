@@ -1,10 +1,10 @@
 const FACT_DIMENSIONS = [
-  { id: 'centro', field: 'centro', title: 'Por Institución' },
+  { id: 'centro', field: 'centro', title: 'Por Institución', donut: true },
   { id: 'proto', field: 'protocolo', title: 'Por Protocolo' },
-  { id: 'fase', field: 'fase', title: 'Por Fase' },
+  { id: 'fase', field: 'fase', title: 'Por Fase', donut: true },
   { id: 'ip', field: 'ip', title: 'Por Investigador Principal' },
   { id: 'esp', field: 'especialidad', title: 'Por Especialidad' },
-  { id: 'tipo', field: 'tipo', title: 'Por Tipo' }
+  { id: 'tipo', field: 'tipo', title: 'Por Tipo', donut: true }
 ];
 
 function isCobrado(r) {
@@ -41,9 +41,9 @@ function renderFacturacion() {
       <h3>${d.title}</h3>
       <div id="wrap-fact-${d.id}" style="height:200px"><canvas id="chart-fact-${d.id}"></canvas></div>
     </div>`;
-  const BIG = ['proto', 'esp'];
-  const smallCharts = FACT_DIMENSIONS.filter(d => !BIG.includes(d.id)).map(dimCard).join('');
-  const bigCharts = FACT_DIMENSIONS.filter(d => BIG.includes(d.id)).map(dimCard).join('');
+  const donutCharts = FACT_DIMENSIONS.filter(d => d.donut).map(dimCard).join('');
+  const barOrder = ['ip', 'proto', 'esp'];
+  const barCharts = barOrder.map(id => FACT_DIMENSIONS.find(d => d.id === id)).map(dimCard).join('');
 
   container.innerHTML = `
     <div class="filters-bar">
@@ -69,10 +69,10 @@ function renderFacturacion() {
       <h3>Evolución Mensual</h3>
       <div style="height:300px"><canvas id="chart-fact-monthly"></canvas></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
-      ${smallCharts}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;align-items:start">
+      ${donutCharts}
     </div>
-    ${bigCharts}
+    ${barCharts}
   `;
 
   const desdeSelect = document.getElementById('fact-desde');
@@ -104,6 +104,34 @@ function renderCobradoChart(dim, data) {
     .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
 
   const wrap = document.getElementById(`wrap-fact-${dim.id}`);
+
+  if (dim.donut) {
+    wrap.style.height = '280px';
+    const grandTotal = entries.reduce((t, e) => t + e.cobrado + e.pendiente, 0);
+    createDoughnutChart(`chart-fact-${dim.id}`, entries.map(e => e.label), entries.map(e => e.cobrado + e.pendiente), {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { family: 'Inter', size: 12 } } },
+        tooltip: {
+          ...defaultTooltip,
+          callbacks: {
+            label: ctx => {
+              const e = entries[ctx.dataIndex];
+              const t = e.cobrado + e.pendiente;
+              return `${formatUSD(t)} (${grandTotal ? (t / grandTotal * 100).toFixed(1) : '0.0'}% del total)`;
+            },
+            footer: items => {
+              const e = entries[items[0].dataIndex];
+              const t = e.cobrado + e.pendiente;
+              return `${t ? (e.cobrado / t * 100).toFixed(1) : '0.0'}% cobrado`;
+            }
+          }
+        }
+      }
+    });
+    return;
+  }
+
   wrap.style.height = Math.max(140, entries.length * 34 + 80) + 'px';
 
   const stackedScales = {
@@ -115,7 +143,7 @@ function renderCobradoChart(dim, data) {
 
   createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), [
     { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
-    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: '#cbd5e1' }
+    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.primary }
   ], {
     horizontal: true,
     scales: stackedScales,
