@@ -5,17 +5,28 @@ function renderProduccion() {
   const container = document.getElementById('section-produccion');
   const protocolos = uniqueValues(UIC_DATA.produccion, 'protocolo');
   const ips = uniqueValues(UIC_DATA.produccion, 'ip');
-  const anios = uniqueValues(UIC_DATA.produccion, 'anio').map(String);
+
+  const allPeriods = [];
+  const seen = new Set();
+  UIC_DATA.produccion.forEach(r => {
+    if (!r.anio || !r.mes) return;
+    const key = `${r.anio}-${r.mes}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      allPeriods.push({ value: key, year: r.anio, month: r.mes, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` });
+    }
+  });
+  allPeriods.sort((a, b) => (a.year * 100 + a.month) - (b.year * 100 + b.month));
 
   container.innerHTML = `
     <div class="filters-bar">
       <div class="filter-group">
-        <label>Año</label>
-        <select id="prod-anio" class="filter-select" onchange="updateProduccion()"></select>
+        <label>Desde</label>
+        <select id="prod-desde" class="filter-select" onchange="updateProduccion()"></select>
       </div>
       <div class="filter-group">
-        <label>Mes</label>
-        <select id="prod-mes" class="filter-select" onchange="updateProduccion()"></select>
+        <label>Hasta</label>
+        <select id="prod-hasta" class="filter-select" onchange="updateProduccion()"></select>
       </div>
       <div class="filter-group">
         <label>Protocolo</label>
@@ -75,10 +86,16 @@ function renderProduccion() {
     </div>
   `;
 
-  populateSelect('prod-anio', anios);
-  const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: monthName(i + 1) }));
-  document.getElementById('prod-mes').innerHTML = '<option value="">Todos</option>' +
-    months.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+  const desdeSelect = document.getElementById('prod-desde');
+  const hastaSelect = document.getElementById('prod-hasta');
+  allPeriods.forEach(p => {
+    desdeSelect.innerHTML += `<option value="${p.value}">${p.label}</option>`;
+    hastaSelect.innerHTML += `<option value="${p.value}">${p.label}</option>`;
+  });
+  if (allPeriods.length > 0) {
+    desdeSelect.value = allPeriods[0].value;
+    hastaSelect.value = allPeriods[allPeriods.length - 1].value;
+  }
   populateSelect('prod-proto', protocolos);
   populateSelect('prod-ip', ips);
 
@@ -87,15 +104,18 @@ function renderProduccion() {
 }
 
 function updateProduccion() {
-  const anio = document.getElementById('prod-anio').value;
-  const mes = document.getElementById('prod-mes').value;
+  const [dY, dM] = document.getElementById('prod-desde').value.split('-').map(Number);
+  const [hY, hM] = document.getElementById('prod-hasta').value.split('-').map(Number);
+  const desdeNum = dY * 100 + dM;
+  const hastaNum = hY * 100 + hM;
   const proto = document.getElementById('prod-proto').value;
   const ip = document.getElementById('prod-ip').value;
   const search = (document.getElementById('prod-search').value || '').toLowerCase();
 
-  let data = UIC_DATA.produccion;
-  if (anio) data = data.filter(r => r.anio === parseInt(anio));
-  if (mes) data = data.filter(r => r.mes === parseInt(mes));
+  let data = UIC_DATA.produccion.filter(r => {
+    const num = r.anio * 100 + r.mes;
+    return num >= desdeNum && num <= hastaNum;
+  });
   if (proto) data = data.filter(r => r.protocolo === proto);
   if (ip) data = data.filter(r => r.ip === ip);
   if (search) data = data.filter(r =>
