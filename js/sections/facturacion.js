@@ -211,7 +211,7 @@ function updateFacturacion() {
     </div>
     <div class="kpi-card">
       <div class="kpi-label">% Cobrado</div>
-      <div class="kpi-value">${formatPct(pctCobrado)}</div>
+      <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatPct(pctCobrado)}</div>
     </div>
   `;
 
