@@ -60,10 +60,11 @@ function parseFacturacion(results) {
       visitas: parseNumber(row['Visitas']),
       moneda: normalizeString(row['Moneda']),
       honorarios: parseNumber(row['Honorarios']),
-      overhead: parseNumber(row['Over Head']),
+      overhead: parseNumber('Over Head 1' in row ? row['Over Head 1'] : row['Over Head']),
       total: parseNumber(row['Total']),
       promedioVisita: parseNumber(row['Promedio']),
-      overheadPct: parseNumber(row['Over Head.1'] || row['Over Head_1']),
+      // Over Head de las instituciones: "Over Head"; "Over Head 1" es otra columna que no se usa
+      overheadPct: parseNumber('Over Head 1' in row ? row['Over Head'] : (row['Over Head.1'] || row['Over Head_1'])),
       goUic: parseNumber(row['Go UIC'] || row['GO UIC']),
       fase: normalizeString(row['Fase']),
       ip: normalizeString(row['IP']),

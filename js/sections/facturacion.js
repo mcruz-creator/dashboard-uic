@@ -7,6 +7,20 @@ const FACT_DIMENSIONS = [
   { id: 'tipo', field: 'tipo', title: 'Por Tipo', donut: true }
 ];
 
+const FACT_MEDIDAS = {
+  goUic: { label: 'Go UIC', title: 'Facturación UIC', field: 'goUic' },
+  overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Over Head', field: 'overheadPct' }
+};
+
+function factMedida() {
+  const el = document.getElementById('fact-medida');
+  return FACT_MEDIDAS[el ? el.value : 'goUic'] || FACT_MEDIDAS.goUic;
+}
+
+function factAmount(r) {
+  return r[factMedida().field] || 0;
+}
+
 function isCobrado(r) {
   const v = (r.cobrado || '').trim().toLowerCase();
   return v === 'si' || v === 'sí';
@@ -38,7 +52,7 @@ function renderFacturacion() {
     <div class="data-table-wrapper" style="margin-bottom:1.5rem">
       <table class="data-table">
         <thead>
-          <tr><th>Protocolo</th><th>Facturación UIC</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>
+          <tr><th>Protocolo</th><th id="th-fact-total">Facturación UIC</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>
         </thead>
         <tbody id="tbody-fact-${d.id}"></tbody>
       </table>
@@ -53,6 +67,12 @@ function renderFacturacion() {
 
   container.innerHTML = `
     <div class="filters-bar">
+      <div class="filter-group">
+        <label>Facturación de</label>
+        <select id="fact-medida" class="filter-select" onchange="updateFacturacion()">
+          ${Object.entries(FACT_MEDIDAS).map(([k, m]) => `<option value="${k}">${m.label}</option>`).join('')}
+        </select>
+      </div>
       <div class="filter-group">
         <label>Desde</label>
         <select id="fact-desde" class="filter-select" onchange="updateFacturacion()"></select>
@@ -92,8 +112,8 @@ function renderCobradoChart(dim, data) {
   data.forEach(r => {
     const key = factKey(dim.field, r[dim.field]);
     if (!groups[key]) groups[key] = { label: r[dim.field] || '(Sin dato)', cobrado: 0, pendiente: 0 };
-    if (isCobrado(r)) groups[key].cobrado += r.goUic;
-    else groups[key].pendiente += r.goUic;
+    if (isCobrado(r)) groups[key].cobrado += factAmount(r);
+    else groups[key].pendiente += factAmount(r);
   });
   const entries = Object.values(groups)
     .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
@@ -192,13 +212,15 @@ function updateFacturacion() {
     return num >= desdeNum && num <= hastaNum;
   });
 
-  const totalGoUic = sumBy(data, 'goUic');
-  const totalCobrado = sumBy(data.filter(isCobrado), 'goUic');
+  const medida = factMedida();
+  document.getElementById('th-fact-total').textContent = medida.title;
+  const totalGoUic = sumBy(data, medida.field);
+  const totalCobrado = sumBy(data.filter(isCobrado), medida.field);
   const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
 
   document.getElementById('fact-kpis').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-label">Facturación UIC</div>
+      <div class="kpi-label">${medida.title}</div>
       <div class="kpi-value">${formatUSD(totalGoUic)}</div>
     </div>
     <div class="kpi-card">
@@ -223,8 +245,8 @@ function updateFacturacion() {
       e = { key, facturado: 0, cobrado: 0, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` };
       monthEntries.push(e);
     }
-    e.facturado += r.goUic;
-    if (isCobrado(r)) e.cobrado += r.goUic;
+    e.facturado += factAmount(r);
+    if (isCobrado(r)) e.cobrado += factAmount(r);
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
