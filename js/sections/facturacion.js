@@ -51,9 +51,7 @@ function renderFacturacion() {
   const dimCard = d => d.table ? `
     <div class="data-table-wrapper" style="margin-bottom:1.5rem">
       <table class="data-table">
-        <thead>
-          <tr><th>Protocolo</th><th id="th-fact-total">Facturación UIC</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>
-        </thead>
+        <thead id="thead-fact-${d.id}"></thead>
         <tbody id="tbody-fact-${d.id}"></tbody>
       </table>
     </div>` : `
@@ -118,21 +116,25 @@ function renderCobradoChart(dim, data) {
   const entries = Object.values(groups)
     .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
 
+  const medida = factMedida();
+
   if (dim.table) {
     const pct = (c, t) => `${t ? (c / t * 100).toFixed(1) : '0.0'}%`;
     const tot = entries.reduce((a, e) => ({ c: a.c + e.cobrado, p: a.p + e.pendiente }), { c: 0, p: 0 });
+    // El cobro (Cobrado = SI) es de UIC: solo se muestra en la vista Go UIC
+    document.getElementById(`thead-fact-${dim.id}`).innerHTML = medida.cobro
+      ? `<tr><th>Protocolo</th><th>${medida.title}</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>`
+      : `<tr><th>Protocolo</th><th>${medida.title}</th></tr>`;
+    const cobroCols = (c, p) => medida.cobro
+      ? `<td>${formatUSD(c)}</td><td>${formatUSD(p)}</td><td>${pct(c, c + p)}</td>` : '';
     document.getElementById(`tbody-fact-${dim.id}`).innerHTML = entries.map(e => `<tr>
       <td>${e.label}</td>
       <td>${formatUSD(e.cobrado + e.pendiente)}</td>
-      <td>${formatUSD(e.cobrado)}</td>
-      <td>${formatUSD(e.pendiente)}</td>
-      <td>${pct(e.cobrado, e.cobrado + e.pendiente)}</td>
+      ${cobroCols(e.cobrado, e.pendiente)}
     </tr>`).join('') + `<tr class="totals-row">
       <td><strong>TOTAL</strong></td>
       <td>${formatUSD(tot.c + tot.p)}</td>
-      <td>${formatUSD(tot.c)}</td>
-      <td>${formatUSD(tot.p)}</td>
-      <td>${pct(tot.c, tot.c + tot.p)}</td>
+      ${cobroCols(tot.c, tot.p)}
     </tr>`;
     return;
   }
@@ -155,6 +157,7 @@ function renderCobradoChart(dim, data) {
               return `${formatUSD(t)} (${grandTotal ? (t / grandTotal * 100).toFixed(1) : '0.0'}% del total)`;
             },
             footer: items => {
+              if (!medida.cobro) return '';
               const e = entries[items[0].dataIndex];
               const t = e.cobrado + e.pendiente;
               return `${t ? (e.cobrado / t * 100).toFixed(1) : '0.0'}% cobrado`;
@@ -175,19 +178,24 @@ function renderCobradoChart(dim, data) {
          ticks: { font: { family: 'Inter', size: 11 }, color: '#374151', callback(v) { return shortLabel(this.getLabelForValue(v)); } } }
   };
 
-  createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), [
-    { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
-    { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.primary }
-  ], {
+  const barSeries = medida.cobro
+    ? [
+        { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
+        { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.primary }
+      ]
+    : [{ label: medida.title, data: entries.map(e => e.cobrado + e.pendiente), backgroundColor: GO_COLORS.primary }];
+
+  createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), barSeries, {
     horizontal: true,
     scales: stackedScales,
     plugins: {
-      legend: { display: true, ...defaultLegend },
+      legend: { ...defaultLegend, display: medida.cobro },
       tooltip: {
         ...defaultTooltip,
         callbacks: {
           label: ctx => `${ctx.dataset.label}: ${formatUSD(ctx.parsed.x)}`,
           footer: items => {
+            if (!medida.cobro) return '';
             const e = entries[items[0].dataIndex];
             const total = e.cobrado + e.pendiente;
             return `Total: ${formatUSD(total)} — ${total ? (e.cobrado / total * 100).toFixed(1) : '0.0'}% cobrado`;
@@ -213,7 +221,6 @@ function updateFacturacion() {
   });
 
   const medida = factMedida();
-  document.getElementById('th-fact-total').textContent = medida.title;
   const totalGoUic = sumBy(data, medida.field);
   const totalCobrado = sumBy(data.filter(isCobrado), medida.field);
   const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
@@ -261,14 +268,18 @@ function updateFacturacion() {
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
+  const lineSeries = [
+    { label: 'Facturado', data: monthEntries.map(e => e.facturado), borderColor: GO_COLORS.primary,
+      backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary }
+  ];
+  if (medida.cobro) {
+    lineSeries.push({ label: 'Cobrado', data: monthEntries.map(e => e.cobrado), borderColor: GO_COLORS.secondary,
+      backgroundColor: 'rgba(0,135,78,0.18)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.secondary });
+  }
+
   createLineChart('chart-fact-monthly',
     monthEntries.map(e => e.label),
-    [
-      { label: 'Facturado', data: monthEntries.map(e => e.facturado), borderColor: GO_COLORS.primary,
-        backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary },
-      { label: 'Cobrado', data: monthEntries.map(e => e.cobrado), borderColor: GO_COLORS.secondary,
-        backgroundColor: 'rgba(0,135,78,0.18)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.secondary }
-    ],
+    lineSeries,
     {
       scales: {
         x: { grid: { display: false }, border: { color: '#e5e7eb' }, ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280' } },
@@ -276,12 +287,13 @@ function updateFacturacion() {
              ticks: { font: { family: 'Inter', size: 11 }, color: '#6b7280', padding: 6, callback: v => formatAxisUSD(v) } }
       },
       plugins: {
-        legend: { display: true, ...defaultLegend },
+        legend: { ...defaultLegend, display: medida.cobro },
         tooltip: {
           ...defaultTooltip,
           callbacks: {
             label: ctx => `${ctx.dataset.label}: ${formatUSD(ctx.parsed.y)}`,
             footer: items => {
+              if (!medida.cobro) return '';
               const e = monthEntries[items[0].dataIndex];
               return `${e.facturado ? (e.cobrado / e.facturado * 100).toFixed(1) : '0.0'}% cobrado`;
             }
