@@ -148,7 +148,7 @@ function updateHome() {
     { label: 'OH Instituciones GO', type: 'fact', field: 'overheadPct', projKey: 'OH Instituciones GO', indent: true },
     { label: 'Ingresos Extraordinarios Inst.', type: 'extra', soloReal: true, indent: true },
     { label: 'GO ACE — UIC', type: 'fact', field: 'goUic', projKey: 'GO ACE', indent: true },
-    { label: 'TOTAL GO', type: 'calc', calc: (vals) => vals['ohInst'] + vals['goAce'], bold: true, calcKeys: ['ohInst', 'goAce'] },
+    { label: 'TOTAL GO', type: 'calc', calc: (vals) => vals['ohInst'] + (vals['extra'] || 0) + vals['goAce'], bold: true, calcKeys: ['ohInst', 'extra', 'goAce'] },
     { label: 'COSTOS OPERATIVOS — GO ACE (UIC)', type: 'section' },
     { label: 'Sueldo Gerenta UIC', type: 'costo', concepto: 'Sueldo Gerenta', projKey: 'Sueldo Gerenta', indent: true },
     { label: 'Gastos operativos', type: 'costo', concepto: 'Gastos operativos', projKey: 'Gastos operativos', indent: true },
@@ -161,6 +161,7 @@ function updateHome() {
 
   const keyMap = {
     'OH Instituciones GO': 'ohInst',
+    'Ingresos Extraordinarios Inst.': 'extra',
     'GO ACE — UIC': 'goAce',
     'Total Costos UIC': 'totalCostos',
     'EBITDA UIC': 'ebitda'
@@ -204,7 +205,9 @@ function updateHome() {
     const vals = {};
     const results = [];
     rowDefs.forEach(row => {
-      if (row.type === 'section' || row.soloReal) { results.push(null); return; }
+      if (row.type === 'section') { results.push(null); return; }
+      // Sin proyección para los extraordinarios: no suman al TOTAL GO proyectado
+      if (row.soloReal) { vals[keyMap[row.label]] = 0; results.push(null); return; }
       let value = 0;
       if (row.type === 'fact' || row.type === 'costo') value = projForMonths(row.projKey, months);
       else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
@@ -239,8 +242,7 @@ function updateHome() {
     const endX2 = monthsX2[monthsX2.length - 1];
     const hastaX2Label = periodLabel(endX2.year, endX2.month);
 
-    // Los extraordinarios no se recurren: la estimación toma lo real, sin duplicarlo
-    const est6mRaw = realTotal.map((v, i) => v === null ? null : (rowDefs[i].soloReal ? v : v * 2));
+    const est6mRaw = realTotal.map(v => v === null ? null : v * 2);
     const est6m = est6mRaw.slice();
     const estVals = {};
     rowDefs.forEach((row, i) => {
