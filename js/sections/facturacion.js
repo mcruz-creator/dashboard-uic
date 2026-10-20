@@ -8,8 +8,8 @@ const FACT_DIMENSIONS = [
 ];
 
 const FACT_MEDIDAS = {
-  goUic: { label: 'Go UIC', title: 'Facturación UIC', field: 'goUic' },
-  overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Instituciones', field: 'overheadPct' }
+  goUic: { label: 'Go UIC', title: 'Facturación UIC', field: 'goUic', cobro: true },
+  overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Instituciones', field: 'overheadPct', cobro: false }
 };
 
 function factMedida() {
@@ -221,11 +221,8 @@ function updateFacturacion() {
   // Ticket promedio: siempre columna Total / Visitas, independiente del selector de facturación
   const ticketPromedio = totalVisitas ? sumBy(data, 'total') / totalVisitas : 0;
 
-  document.getElementById('fact-kpis').innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-label">${medida.title}</div>
-      <div class="kpi-value">${formatUSD(totalGoUic)}</div>
-    </div>
+  // "Cobrado = SI" refiere al cobro de UIC: con la vista de Instituciones no aplica
+  const cobroCards = `
     <div class="kpi-card">
       <div class="kpi-label">Cobrado</div>
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatUSD(totalCobrado)}</div>
@@ -237,7 +234,14 @@ function updateFacturacion() {
     <div class="kpi-card">
       <div class="kpi-label">% Cobrado</div>
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatPct(pctCobrado)}</div>
+    </div>`;
+
+  document.getElementById('fact-kpis').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">${medida.title}</div>
+      <div class="kpi-value">${formatUSD(totalGoUic)}</div>
     </div>
+    ${medida.cobro ? cobroCards : ''}
     <div class="kpi-card">
       <div class="kpi-label">Ticket Promedio</div>
       <div class="kpi-value">${formatUSD(ticketPromedio)}</div>
