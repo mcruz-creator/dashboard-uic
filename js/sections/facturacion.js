@@ -277,7 +277,7 @@ function updateFacturacion() {
   const ticketPromedio = totalVisitas ? sumBy(data, 'total') / totalVisitas : 0;
 
   // Facturado y Cobrado refieren a UIC: con la vista de Instituciones no aplican
-  const cobroCards = `
+  const facturadoCards = `
     <div class="kpi-card">
       <div class="kpi-label">Facturado UIC</div>
       <div class="kpi-value">${formatUSD(totalFacturado)}</div>
@@ -285,7 +285,8 @@ function updateFacturacion() {
     <div class="kpi-card">
       <div class="kpi-label">% Facturado UIC</div>
       <div class="kpi-value">${formatPct(pctFacturado)}</div>
-    </div>
+    </div>`;
+  const cobroCards = `
     <div class="kpi-card">
       <div class="kpi-label">Cobrado UIC</div>
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatUSD(totalCobrado)}</div>
@@ -300,13 +301,16 @@ function updateFacturacion() {
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatPct(pctCobrado)}</div>
     </div>`;
 
-  document.getElementById('fact-kpis').innerHTML = `
+  // Vista UIC: fila 1 = esperada + facturado, fila 2 = cobrado, Ticket Promedio a la derecha ocupando las dos filas
+  const kpis = document.getElementById('fact-kpis');
+  kpis.className = 'kpi-grid' + (medida.cobro ? ' kpi-grid-uic' : '');
+  kpis.innerHTML = `
     <div class="kpi-card">
       <div class="kpi-label">${medida.title}</div>
       <div class="kpi-value">${formatUSD(totalEsperado)}</div>
     </div>
-    ${medida.cobro ? cobroCards : ''}
-    <div class="kpi-card">
+    ${medida.cobro ? facturadoCards + cobroCards : ''}
+    <div class="kpi-card kpi-card-ticket">
       <div class="kpi-label">Ticket Promedio</div>
       <div class="kpi-value">${formatUSD(ticketPromedio)}</div>
     </div>

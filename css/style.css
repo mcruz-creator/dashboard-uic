@@ -156,6 +156,25 @@ body {
   margin-top: 0.15rem;
 }
 
+/* Facturación UIC: fila de Facturado arriba, fila de Cobrado abajo, Ticket Promedio alto a la derecha */
+.kpi-grid.kpi-grid-uic {
+  grid-template-columns: repeat(4, 1fr);
+}
+.kpi-grid-uic .kpi-card-ticket {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .kpi-grid.kpi-grid-uic { grid-template-columns: repeat(2, 1fr); }
+  .kpi-grid-uic .kpi-card-ticket { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 480px) {
+  .kpi-grid.kpi-grid-uic { grid-template-columns: 1fr; }
+}
+
 .alert-banner {
   background: #fef2f2;
   border: 1px solid #fecaca;
