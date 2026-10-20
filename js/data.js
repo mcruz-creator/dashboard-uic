@@ -3,7 +3,8 @@ const SHEET_URLS = {
   facturacion: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=535882626`,
   produccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=461266884`,
   proyeccion:  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1697903188`,
-  costosReales: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1931354218`
+  costosReales: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1931354218`,
+  extraordinarios: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=485859392`
 };
 
 const UIC_DATA = {
@@ -11,6 +12,7 @@ const UIC_DATA = {
   produccion: [],
   proyeccion: {},
   costosReales: [],
+  extraordinarios: [],
   loaded: false
 };
 
@@ -226,6 +228,23 @@ function parseCostosReales(results) {
   return costos;
 }
 
+// Hoja "Facturacion extraordinaria por Institucion": toma la fila "Ingresos Dolarizados" (USD por mes)
+function parseExtraordinarios(results) {
+  const rows = results.data || [];
+  const headers = Object.keys(rows[0] || {});
+  const labelKey = headers[0];
+  const row = rows.find(r => normalizeString(r[labelKey]).toLowerCase().includes('dolarizado'));
+  if (!row) return [];
+  const out = [];
+  headers.slice(1).forEach(col => {
+    const match = col.match(/([a-záéíóú]+)-(\d{2})/i);
+    if (!match) return;
+    const mes = MONTH_ABBR[match[1].toLowerCase().substring(0, 3)] || 0;
+    if (mes > 0) out.push({ anio: 2000 + parseInt(match[2]), mes, usd: parseNumber(row[col]) });
+  });
+  return out;
+}
+
 function fetchCSV(url) {
   return new Promise((resolve, reject) => {
     Papa.parse(url, {
@@ -244,17 +263,20 @@ async function loadAllData() {
   document.getElementById('content').classList.add('hidden');
 
   try {
-    const [factResult, prodResult, proyResult, costosResult] = await Promise.all([
+    const [factResult, prodResult, proyResult, costosResult, extraResult] = await Promise.all([
       fetchCSV(SHEET_URLS.facturacion),
       fetchCSV(SHEET_URLS.produccion),
       fetchCSV(SHEET_URLS.proyeccion),
-      fetchCSV(SHEET_URLS.costosReales)
+      fetchCSV(SHEET_URLS.costosReales),
+      // hoja opcional: si falla, el resto del dashboard sigue funcionando
+      fetchCSV(SHEET_URLS.extraordinarios).catch(() => ({ data: [] }))
     ]);
 
     UIC_DATA.facturacion = parseFacturacion(factResult);
     UIC_DATA.produccion = parseProduccion(prodResult);
     UIC_DATA.proyeccion = parseProyeccion(proyResult);
     UIC_DATA.costosReales = parseCostosReales(costosResult);
+    UIC_DATA.extraordinarios = parseExtraordinarios(extraResult);
     UIC_DATA.loaded = true;
 
     document.getElementById('loading').classList.add('hidden');

@@ -113,6 +113,13 @@ function updateHome() {
     return rows.reduce((s, r) => s + (r[field] || 0), 0);
   }
 
+  // Ingresos extraordinarios de instituciones (USD): solo existen como dato real, no hay proyección
+  function sumExtra(months) {
+    return months.reduce((s, { year, month }) => s + UIC_DATA.extraordinarios
+      .filter(e => e.anio === year && e.mes === month)
+      .reduce((s2, e) => s2 + e.usd, 0), 0);
+  }
+
   function sumCostoConcepto(concepto, months) {
     return months.reduce((s, { year, month }) => {
       return s + UIC_DATA.costosReales
@@ -139,6 +146,7 @@ function updateHome() {
     { label: 'Facturación Total GO UIC', type: 'fact', field: 'total', projKey: 'Facturación Total GO UIC', bold: true },
     { label: 'DISTRIBUCIÓN — GRUPO OROÑO', type: 'section' },
     { label: 'OH Instituciones GO', type: 'fact', field: 'overheadPct', projKey: 'OH Instituciones GO', indent: true },
+    { label: 'Ingresos Extraordinarios Inst.', type: 'extra', soloReal: true, indent: true },
     { label: 'GO ACE — UIC', type: 'fact', field: 'goUic', projKey: 'GO ACE', indent: true },
     { label: 'TOTAL GO', type: 'calc', calc: (vals) => vals['ohInst'] + vals['goAce'], bold: true, calcKeys: ['ohInst', 'goAce'] },
     { label: 'COSTOS OPERATIVOS — GO ACE (UIC)', type: 'section' },
@@ -165,6 +173,7 @@ function updateHome() {
       if (row.type === 'section') { results.push(null); return; }
       let value = 0;
       if (row.type === 'fact') value = sumFactField(row.field, months);
+      else if (row.type === 'extra') value = sumExtra(months);
       else if (row.type === 'costo') value = sumCostoConcepto(row.concepto, months);
       else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
       const key = keyMap[row.label];
@@ -181,6 +190,7 @@ function updateHome() {
       if (row.type === 'section') { results.push(null); return; }
       let value = 0;
       if (row.type === 'fact') value = sumFactFieldMonth(row.field, year, month);
+      else if (row.type === 'extra') value = sumExtra([{ year, month }]);
       else if (row.type === 'costo') value = sumCostoConceptoMonth(row.concepto, year, month);
       else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
       const key = keyMap[row.label];
@@ -194,7 +204,7 @@ function updateHome() {
     const vals = {};
     const results = [];
     rowDefs.forEach(row => {
-      if (row.type === 'section') { results.push(null); return; }
+      if (row.type === 'section' || row.soloReal) { results.push(null); return; }
       let value = 0;
       if (row.type === 'fact' || row.type === 'costo') value = projForMonths(row.projKey, months);
       else if (row.type === 'calc' || row.type === 'pct') value = row.calc(vals);
@@ -229,7 +239,8 @@ function updateHome() {
     const endX2 = monthsX2[monthsX2.length - 1];
     const hastaX2Label = periodLabel(endX2.year, endX2.month);
 
-    const est6mRaw = realTotal.map(v => v === null ? null : v * 2);
+    // Los extraordinarios no se recurren: la estimación toma lo real, sin duplicarlo
+    const est6mRaw = realTotal.map((v, i) => v === null ? null : (rowDefs[i].soloReal ? v : v * 2));
     const est6m = est6mRaw.slice();
     const estVals = {};
     rowDefs.forEach((row, i) => {
@@ -273,6 +284,16 @@ function updateHome() {
     const indent = row.indent ? 'padding-left:2rem' : 'padding-left:1rem';
 
     const monthCells = monthColumns.map(c => `<td style="text-align:right">${fmt(c.values[i])}</td>`).join('');
+
+    if (row.soloReal) {
+      const dash = '<td style="text-align:right;color:#9ca3af">—</td>';
+      return `<tr style="${style}">
+      <td style="${indent};white-space:nowrap">${row.label}</td>
+      ${monthCells}
+      <td style="text-align:right;font-weight:600">${fmt(compReal[i])}</td>
+      ${dash}${dash}${dash}
+    </tr>`;
+    }
 
     const diffVal = diff[i];
     const diffColor = isPct ? '' : (diffVal >= 0 ? 'color:var(--go-success)' : 'color:var(--go-error)');
