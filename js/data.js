@@ -75,7 +75,9 @@ function parseFacturacion(results) {
       numeroFact: normalizeString(row['Numero Fact']),
       mes: parseMonthSpanish(row['Mes']),
       anio: parseNumber(row['Año'] || row['Ano']),
-      cobrado: normalizeString(row['Cobrado'])
+      // Circuito UIC: Go UIC (esperado) -> "Facturado UIC" (SI) -> "Cobrado UIC" (SI)
+      facturadoUic: normalizeString(row['Facturado UIC']),
+      cobrado: normalizeString(row['Cobrado UIC'] || row['Cobrado'])
     }));
 }
 

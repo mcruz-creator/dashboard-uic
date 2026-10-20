@@ -8,7 +8,7 @@ const FACT_DIMENSIONS = [
 ];
 
 const FACT_MEDIDAS = {
-  goUic: { label: 'Go UIC', title: 'Facturación UIC', field: 'goUic', cobro: true },
+  goUic: { label: 'Go UIC', title: 'Facturación esperada UIC', field: 'goUic', cobro: true },
   overhead: { label: 'Over Head (Instituciones)', title: 'Facturación Instituciones', field: 'overheadPct', cobro: false }
 };
 
@@ -21,9 +21,26 @@ function factAmount(r) {
   return r[factMedida().field] || 0;
 }
 
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function isSi(v) {
+  const s = (v || '').trim().toLowerCase();
+  return s === 'si' || s === 'sí';
+}
+
+function isFacturado(r) {
+  return isSi(r.facturadoUic);
+}
+
+// No se cobra lo que no se facturó: Cobrado solo cuenta si la fila también está facturada
 function isCobrado(r) {
-  const v = (r.cobrado || '').trim().toLowerCase();
-  return v === 'si' || v === 'sí';
+  return isSi(r.cobrado) && isFacturado(r);
+}
+
+function isCobradoSinFacturar(r) {
+  return isSi(r.cobrado) && !isFacturado(r);
 }
 
 function factKey(field, value) {
@@ -80,6 +97,7 @@ function renderFacturacion() {
         <select id="fact-hasta" class="filter-select" onchange="updateFacturacion()"></select>
       </div>
     </div>
+    <div id="fact-alert"></div>
     <div class="kpi-grid" id="fact-kpis"></div>
     <div class="chart-container">
       <h3>Evolución Mensual</h3>
@@ -109,32 +127,36 @@ function renderCobradoChart(dim, data) {
   const groups = {};
   data.forEach(r => {
     const key = factKey(dim.field, r[dim.field]);
-    if (!groups[key]) groups[key] = { label: r[dim.field] || '(Sin dato)', cobrado: 0, pendiente: 0 };
-    if (isCobrado(r)) groups[key].cobrado += factAmount(r);
-    else groups[key].pendiente += factAmount(r);
+    if (!groups[key]) groups[key] = { label: r[dim.field] || '(Sin dato)', esperado: 0, facturado: 0, cobrado: 0 };
+    const g = groups[key];
+    const amt = factAmount(r);
+    g.esperado += amt;
+    if (isFacturado(r)) g.facturado += amt;
+    if (isCobrado(r)) g.cobrado += amt;
   });
-  const entries = Object.values(groups)
-    .sort((a, b) => (b.cobrado + b.pendiente) - (a.cobrado + a.pendiente));
+  const entries = Object.values(groups).sort((a, b) => b.esperado - a.esperado);
 
   const medida = factMedida();
+  const pct = (n, d) => `${d ? (n / d * 100).toFixed(1) : '0.0'}%`;
 
   if (dim.table) {
-    const pct = (c, t) => `${t ? (c / t * 100).toFixed(1) : '0.0'}%`;
-    const tot = entries.reduce((a, e) => ({ c: a.c + e.cobrado, p: a.p + e.pendiente }), { c: 0, p: 0 });
-    // El cobro (Cobrado = SI) es de UIC: solo se muestra en la vista Go UIC
+    const tot = entries.reduce((a, e) => ({
+      esperado: a.esperado + e.esperado, facturado: a.facturado + e.facturado, cobrado: a.cobrado + e.cobrado
+    }), { esperado: 0, facturado: 0, cobrado: 0 });
+    // El circuito Facturado/Cobrado es de UIC: solo se muestra en la vista Go UIC
     document.getElementById(`thead-fact-${dim.id}`).innerHTML = medida.cobro
-      ? `<tr><th>Protocolo</th><th>${medida.title}</th><th>Cobrado</th><th>No cobrado</th><th>% Cobrado</th></tr>`
+      ? `<tr><th>Protocolo</th><th>${medida.title}</th><th>Facturado UIC</th><th>% Facturado UIC</th><th>Cobrado UIC</th><th>No cobrado</th><th>% Cobrado</th></tr>`
       : `<tr><th>Protocolo</th><th>${medida.title}</th></tr>`;
-    const cobroCols = (c, p) => medida.cobro
-      ? `<td>${formatUSD(c)}</td><td>${formatUSD(p)}</td><td>${pct(c, c + p)}</td>` : '';
+    const cobroCols = e => medida.cobro
+      ? `<td>${formatUSD(e.facturado)}</td><td>${pct(e.facturado, e.esperado)}</td><td>${formatUSD(e.cobrado)}</td><td>${formatUSD(e.facturado - e.cobrado)}</td><td>${pct(e.cobrado, e.facturado)}</td>` : '';
     document.getElementById(`tbody-fact-${dim.id}`).innerHTML = entries.map(e => `<tr>
-      <td>${e.label}</td>
-      <td>${formatUSD(e.cobrado + e.pendiente)}</td>
-      ${cobroCols(e.cobrado, e.pendiente)}
+      <td>${esc(e.label)}</td>
+      <td>${formatUSD(e.esperado)}</td>
+      ${cobroCols(e)}
     </tr>`).join('') + `<tr class="totals-row">
       <td><strong>TOTAL</strong></td>
-      <td>${formatUSD(tot.c + tot.p)}</td>
-      ${cobroCols(tot.c, tot.p)}
+      <td>${formatUSD(tot.esperado)}</td>
+      ${cobroCols(tot)}
     </tr>`;
     return;
   }
@@ -143,8 +165,8 @@ function renderCobradoChart(dim, data) {
 
   if (dim.donut) {
     wrap.style.height = '280px';
-    const grandTotal = entries.reduce((t, e) => t + e.cobrado + e.pendiente, 0);
-    createDoughnutChart(`chart-fact-${dim.id}`, entries.map(e => e.label), entries.map(e => e.cobrado + e.pendiente), {
+    const grandTotal = entries.reduce((t, e) => t + e.esperado, 0);
+    createDoughnutChart(`chart-fact-${dim.id}`, entries.map(e => e.label), entries.map(e => e.esperado), {
       cutout: '62%',
       plugins: {
         legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, font: { family: 'Inter', size: 12 } } },
@@ -153,14 +175,12 @@ function renderCobradoChart(dim, data) {
           callbacks: {
             label: ctx => {
               const e = entries[ctx.dataIndex];
-              const t = e.cobrado + e.pendiente;
-              return `${formatUSD(t)} (${grandTotal ? (t / grandTotal * 100).toFixed(1) : '0.0'}% del total)`;
+              return `${formatUSD(e.esperado)} (${pct(e.esperado, grandTotal)} del total)`;
             },
             footer: items => {
               if (!medida.cobro) return '';
               const e = entries[items[0].dataIndex];
-              const t = e.cobrado + e.pendiente;
-              return `${t ? (e.cobrado / t * 100).toFixed(1) : '0.0'}% cobrado`;
+              return [`${pct(e.facturado, e.esperado)} facturado`, `${pct(e.cobrado, e.facturado)} cobrado (de lo facturado)`];
             }
           }
         }
@@ -178,12 +198,14 @@ function renderCobradoChart(dim, data) {
          ticks: { font: { family: 'Inter', size: 11 }, color: '#374151', callback(v) { return shortLabel(this.getLabelForValue(v)); } } }
   };
 
+  // Tres tramos que suman lo esperado: cobrado + facturado sin cobrar + pendiente de facturar
   const barSeries = medida.cobro
     ? [
-        { label: 'Cobrado', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
-        { label: 'No cobrado', data: entries.map(e => e.pendiente), backgroundColor: GO_COLORS.primary }
+        { label: 'Cobrado UIC', data: entries.map(e => e.cobrado), backgroundColor: GO_COLORS.secondary },
+        { label: 'Facturado sin cobrar', data: entries.map(e => e.facturado - e.cobrado), backgroundColor: GO_COLORS.primary },
+        { label: 'Pendiente de facturar', data: entries.map(e => e.esperado - e.facturado), backgroundColor: '#cbd5e1' }
       ]
-    : [{ label: medida.title, data: entries.map(e => e.cobrado + e.pendiente), backgroundColor: GO_COLORS.primary }];
+    : [{ label: medida.title, data: entries.map(e => e.esperado), backgroundColor: GO_COLORS.primary }];
 
   createBarChart(`chart-fact-${dim.id}`, entries.map(e => e.label), barSeries, {
     horizontal: true,
@@ -197,13 +219,34 @@ function renderCobradoChart(dim, data) {
           footer: items => {
             if (!medida.cobro) return '';
             const e = entries[items[0].dataIndex];
-            const total = e.cobrado + e.pendiente;
-            return `Total: ${formatUSD(total)} — ${total ? (e.cobrado / total * 100).toFixed(1) : '0.0'}% cobrado`;
+            return `Esperado: ${formatUSD(e.esperado)} — ${pct(e.facturado, e.esperado)} facturado, ${pct(e.cobrado, e.facturado)} cobrado`;
           }
         }
       }
     }
   });
+}
+
+// Cobrado = SI sin Facturado = SI es un error de carga (no se cobra lo que no se facturó).
+// Se revisa sobre toda la planilla, sin filtros, para que ningún filtro lo esconda.
+function renderFactAlert() {
+  const el = document.getElementById('fact-alert');
+  if (!el) return;
+  const bad = UIC_DATA.facturacion.filter(isCobradoSinFacturar);
+  if (!bad.length) { el.innerHTML = ''; return; }
+  const MAX = 10;
+  const items = bad.slice(0, MAX).map(r => {
+    const per = r.mes && r.anio ? `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` : 's/f';
+    const fact = r.numeroFact ? `, factura ${esc(r.numeroFact)}` : '';
+    return `<li>${esc(r.protocolo)} — ${esc(r.centro || '(Sin institución)')} — ${per}${fact}</li>`;
+  }).join('');
+  const more = bad.length > MAX ? `<li>… y ${bad.length - MAX} más</li>` : '';
+  const plural = bad.length !== 1;
+  el.innerHTML = `<div class="alert-banner" role="alert">
+    <strong>Revisar la planilla: ${bad.length} ${plural ? 'filas tienen' : 'fila tiene'} Cobrado UIC = SI sin Facturado UIC = SI</strong>
+    No se ${plural ? 'cuentan' : 'cuenta'} como cobrad${plural ? 'as' : 'a'} hasta que se marque${plural ? 'n' : ''} como facturad${plural ? 'as' : 'a'}.
+    <ul>${items}${more}</ul>
+  </div>`;
 }
 
 function updateFacturacion() {
@@ -220,23 +263,37 @@ function updateFacturacion() {
     return num >= desdeNum && num <= hastaNum;
   });
 
+  renderFactAlert();
+
   const medida = factMedida();
-  const totalGoUic = sumBy(data, medida.field);
+  const totalEsperado = sumBy(data, medida.field);
+  const totalFacturado = sumBy(data.filter(isFacturado), medida.field);
   const totalCobrado = sumBy(data.filter(isCobrado), medida.field);
-  const pctCobrado = totalGoUic ? totalCobrado / totalGoUic : 0;
+  const pctFacturado = totalEsperado ? totalFacturado / totalEsperado : 0;
+  const pctCobradoEsperado = totalEsperado ? totalCobrado / totalEsperado : 0;
+  const pctCobrado = totalFacturado ? totalCobrado / totalFacturado : 0;
   const totalVisitas = sumBy(data, 'visitas');
   // Ticket promedio: siempre columna Total / Visitas, independiente del selector de facturación
   const ticketPromedio = totalVisitas ? sumBy(data, 'total') / totalVisitas : 0;
 
-  // "Cobrado = SI" refiere al cobro de UIC: con la vista de Instituciones no aplica
+  // Facturado y Cobrado refieren a UIC: con la vista de Instituciones no aplican
   const cobroCards = `
     <div class="kpi-card">
-      <div class="kpi-label">Cobrado</div>
+      <div class="kpi-label">Facturado UIC</div>
+      <div class="kpi-value">${formatUSD(totalFacturado)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">% Facturado UIC</div>
+      <div class="kpi-value">${formatPct(pctFacturado)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cobrado UIC</div>
       <div class="kpi-value" style="color:${GO_COLORS.secondary}">${formatUSD(totalCobrado)}</div>
+      <div class="kpi-sub">${formatPct(pctCobradoEsperado)} de lo esperado</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">No cobrado</div>
-      <div class="kpi-value">${formatUSD(totalGoUic - totalCobrado)}</div>
+      <div class="kpi-value">${formatUSD(totalFacturado - totalCobrado)}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">% Cobrado</div>
@@ -246,7 +303,7 @@ function updateFacturacion() {
   document.getElementById('fact-kpis').innerHTML = `
     <div class="kpi-card">
       <div class="kpi-label">${medida.title}</div>
-      <div class="kpi-value">${formatUSD(totalGoUic)}</div>
+      <div class="kpi-value">${formatUSD(totalEsperado)}</div>
     </div>
     ${medida.cobro ? cobroCards : ''}
     <div class="kpi-card">
@@ -260,22 +317,29 @@ function updateFacturacion() {
     const key = `${r.anio}-${String(r.mes).padStart(2, '0')}`;
     let e = monthEntries.find(x => x.key === key);
     if (!e) {
-      e = { key, facturado: 0, cobrado: 0, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` };
+      e = { key, esperado: 0, facturado: 0, cobrado: 0, label: `${monthName(r.mes).substring(0, 3)}-${String(r.anio).slice(-2)}` };
       monthEntries.push(e);
     }
-    e.facturado += factAmount(r);
-    if (isCobrado(r)) e.cobrado += factAmount(r);
+    const amt = factAmount(r);
+    e.esperado += amt;
+    if (isFacturado(r)) e.facturado += amt;
+    if (isCobrado(r)) e.cobrado += amt;
   });
   monthEntries.sort((a, b) => a.key.localeCompare(b.key));
 
-  const lineSeries = [
-    { label: 'Facturado', data: monthEntries.map(e => e.facturado), borderColor: GO_COLORS.primary,
-      backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary }
-  ];
-  if (medida.cobro) {
-    lineSeries.push({ label: 'Cobrado', data: monthEntries.map(e => e.cobrado), borderColor: GO_COLORS.secondary,
-      backgroundColor: 'rgba(0,135,78,0.18)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.secondary });
-  }
+  const lineSeries = medida.cobro
+    ? [
+        { label: 'Esperada', data: monthEntries.map(e => e.esperado), borderColor: GO_COLORS.primary,
+          backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary },
+        { label: 'Facturado UIC', data: monthEntries.map(e => e.facturado), borderColor: GO_COLORS.primaryLight,
+          backgroundColor: 'rgba(0,89,179,0.10)', fill: false, tension: 0.35, pointBorderColor: GO_COLORS.primaryLight },
+        { label: 'Cobrado UIC', data: monthEntries.map(e => e.cobrado), borderColor: GO_COLORS.secondary,
+          backgroundColor: 'rgba(0,135,78,0.18)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.secondary }
+      ]
+    : [
+        { label: 'Facturado', data: monthEntries.map(e => e.esperado), borderColor: GO_COLORS.primary,
+          backgroundColor: 'rgba(0,51,102,0.10)', fill: true, tension: 0.35, pointBorderColor: GO_COLORS.primary }
+      ];
 
   createLineChart('chart-fact-monthly',
     monthEntries.map(e => e.label),
@@ -295,7 +359,8 @@ function updateFacturacion() {
             footer: items => {
               if (!medida.cobro) return '';
               const e = monthEntries[items[0].dataIndex];
-              return `${e.facturado ? (e.cobrado / e.facturado * 100).toFixed(1) : '0.0'}% cobrado`;
+              const p = (n, d) => `${d ? (n / d * 100).toFixed(1) : '0.0'}%`;
+              return [`${p(e.facturado, e.esperado)} facturado`, `${p(e.cobrado, e.facturado)} cobrado (de lo facturado)`];
             }
           }
         }

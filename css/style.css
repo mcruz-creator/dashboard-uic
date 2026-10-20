@@ -150,6 +150,25 @@ body {
   color: var(--go-primary);
 }
 
+.kpi-card .kpi-sub {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.15rem;
+}
+
+.alert-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+  color: #7f1d1d;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+.alert-banner strong { display: block; margin-bottom: 0.35rem; }
+.alert-banner ul { margin: 0.4rem 0 0 1.1rem; list-style: disc; }
+
 .kpi-card .kpi-value.success { color: var(--go-success); }
 .kpi-card .kpi-value.warning { color: var(--go-warning); }
 .kpi-card .kpi-value.error { color: var(--go-error); }
